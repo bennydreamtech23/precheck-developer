@@ -205,11 +205,165 @@ print_summary() {
   fi
 }
 
+# Check for required tools BEFORE any setup
+check_required_tools() {
+  local missing_tools=()
+  
+  if ! command -v elixir >/dev/null 2>&1; then
+    missing_tools+=("elixir")
+  fi
+  
+  if ! command -v mix >/dev/null 2>&1; then
+    missing_tools+=("mix")
+  fi
+  
+  if [ ${#missing_tools[@]} -gt 0 ]; then
+    echo -e "\n${RED}❌ Missing required tools: ${missing_tools[*]}${NC}"
+    echo ""
+    echo "Install Elixir:"
+    echo "  macOS:  brew install elixir"
+    echo "  Ubuntu: sudo apt-get install elixir"
+    echo "  Docs:   https://elixir-lang.org/install.html"
+    echo ""
+    exit 1
+  fi
+}
+
+# Check and validate environment
+check_environment() {
+  echo -e "\n${CYAN}Checking environment configuration...${NC}"
+  
+  # Check for .env file
+  if [ -f ".env.example" ] && [ ! -f ".env" ]; then
+    echo -e "${RED}⚠️  Environment file missing!${NC}"
+    echo -e "   Found .env.example but no .env file"
+    echo -e "   ${YELLOW}Action required:${NC} cp .env.example .env"
+    echo ""
+    read -p "Create .env from .env.example now? (y/n): " -n 1 -r
+    echo ""
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+      cp .env.example .env
+      echo -e "${GREEN}✅ Created .env file${NC}"
+      echo -e "${YELLOW}⚠️  Please configure required values in .env before starting${NC}"
+      echo ""
+    else
+      echo -e "${YELLOW}⚠️  Project may fail to start without .env configuration${NC}"
+      echo ""
+    fi
+  fi
+  
+  # Check for required environment variables in config
+  if grep -r "System.get_env" config/ 2>/dev/null | grep -q "!"; then
+    echo -e "${YELLOW}⚠️  Found required environment variables in config/${NC}"
+    echo -e "   Make sure all required env vars are set"
+    
+    # List required env vars
+    local required_vars=$(grep -r "System.get_env" config/ 2>/dev/null | grep "!" | sed 's/.*System.get_env("\([^"]*\)").*/\1/' | sort -u)
+    if [ -n "$required_vars" ]; then
+      echo -e "   ${CYAN}Required variables:${NC}"
+      echo "$required_vars" | while read -r var; do
+        if [ -f ".env" ] && grep -q "^${var}=" .env; then
+          echo -e "     ✅ $var (configured)"
+        else
+          echo -e "     ❌ $var (MISSING)"
+        fi
+      done
+      echo ""
+    fi
+  fi
+}
+
+# Run secrets and hardcoded credentials scan
+run_security_scan() {
+  echo -e "\n${CYAN}╔════════════════════════════════════════╗${NC}"
+  echo -e "${CYAN}║     SECURITY SCAN                      ║${NC}"
+  echo -e "${CYAN}╚════════════════════════════════════════╝${NC}\n"
+  
+  local secrets_found=0
+  
+  # Check for hardcoded credentials in source files
+  echo -e "${BLUE}Scanning for hardcoded credentials...${NC}"
+  
+  if grep -rn --include="*.ex" --include="*.exs" -E '(password|secret|api_key|token)\s*=\s*"[^"]+"' lib/ config/ 2>/dev/null | grep -v "test"; then
+    echo -e "${RED}⚠️  Found hardcoded credentials in source files${NC}"
+    secrets_found=$((secrets_found + 1))
+  else
+    echo -e "${GREEN}✅ No hardcoded credentials found${NC}"
+  fi
+  
+  # Check for API keys and tokens
+  echo -e "\n${BLUE}Scanning for API keys and tokens...${NC}"
+  
+  if grep -rn --include="*.ex" --include="*.exs" -E '(AKIA|ghp_|sk-|xox[baprs]-)[A-Za-z0-9_-]+' lib/ config/ 2>/dev/null; then
+    echo -e "${RED}⚠️  Found potential API keys/tokens in source files${NC}"
+    secrets_found=$((secrets_found + 1))
+  else
+    echo -e "${GREEN}✅ No API keys/tokens found${NC}"
+  fi
+  
+  # Check for database URLs with credentials
+  echo -e "\n${BLUE}Scanning for database URLs with credentials...${NC}"
+  
+  if grep -rn --include="*.ex" --include="*.exs" -E '(postgres|mysql|mongodb)://[^:]+:[^@]+@' lib/ config/ 2>/dev/null; then
+    echo -e "${RED}⚠️  Found database URLs with credentials${NC}"
+    secrets_found=$((secrets_found + 1))
+  else
+    echo -e "${GREEN}✅ No database URLs with credentials${NC}"
+  fi
+  
+  # Check .gitignore for sensitive files
+  echo -e "\n${BLUE}Checking .gitignore configuration...${NC}"
+  
+  if [ ! -f ".gitignore" ]; then
+    echo -e "${RED}⚠️  No .gitignore file found${NC}"
+    secrets_found=$((secrets_found + 1))
+  else
+    local sensitive_patterns=(".env" "*.pem" "*.key" "config/prod.secret.exs")
+    local missing_patterns=()
+    
+    for pattern in "${sensitive_patterns[@]}"; do
+      if ! grep -q "^${pattern}$" .gitignore 2>/dev/null; then
+        missing_patterns+=("$pattern")
+      fi
+    done
+    
+    if [ ${#missing_patterns[@]} -gt 0 ]; then
+      echo -e "${YELLOW}⚠️  .gitignore missing sensitive patterns:${NC}"
+      for pattern in "${missing_patterns[@]}"; do
+        echo -e "     $pattern"
+      done
+      secrets_found=$((secrets_found + 1))
+    else
+      echo -e "${GREEN}✅ .gitignore properly configured${NC}"
+    fi
+  fi
+  
+  # Summary
+  echo ""
+  if [ $secrets_found -gt 0 ]; then
+    echo -e "${RED}⚠️  Security scan found $secrets_found issue(s)${NC}"
+    echo -e "${YELLOW}Recommendations:${NC}"
+    echo "  1. Remove hardcoded secrets from source code"
+    echo "  2. Use System.get_env() for sensitive values"
+    echo "  3. Add sensitive files to .gitignore"
+    echo "  4. Use config/runtime.exs for production secrets"
+    echo ""
+  else
+    echo -e "${GREEN}✅ Security scan passed - no issues found${NC}"
+    echo ""
+  fi
+}
+
+# Auto-setup with project start
 auto_setup() {
   echo -e "\n${CYAN}╔════════════════════════════════════════╗${NC}"
   echo -e "${CYAN}║    AUTOMATIC PROJECT SETUP             ║${NC}"
   echo -e "${CYAN}╚════════════════════════════════════════╝${NC}\n"
   
+  # Check environment first
+  check_environment
+  
+  # Install dependencies
   section "Installing dependencies"
   if mix deps.get; then
     echo -e "${GREEN}✅ Dependencies installed${NC}"
@@ -218,6 +372,7 @@ auto_setup() {
     return 1
   fi
   
+  # Compile project
   section "Compiling project"
   if mix compile; then
     echo -e "${GREEN}✅ Project compiled${NC}"
@@ -226,49 +381,52 @@ auto_setup() {
     return 1
   fi
   
-  # Check for Ecto and run migrations
+  # Database setup for Phoenix/Ecto projects
   if grep -q "phoenix_ecto\|ecto_sql" mix.exs 2>/dev/null; then
     section "Database setup"
-    if mix ecto.create 2>/dev/null || echo "Database may already exist"; then
-      if mix ecto.migrate; then
-        echo -e "${GREEN}✅ Database migrations complete${NC}"
-      else
-        echo -e "${YELLOW}⚠️  Database migrations failed (may be up to date)${NC}"
-      fi
-    fi
-  fi
-  
-  # Check for Tailwind
-  if grep -q "tailwind" mix.exs 2>/dev/null; then
-    section "Installing Tailwind CSS"
-    if mix tailwind.install; then
-      echo -e "${GREEN}✅ Tailwind installed${NC}"
+    
+    # Check if database exists
+    if mix ecto.create 2>/dev/null; then
+      echo -e "${GREEN}✅ Database created${NC}"
     else
-      echo -e "${YELLOW}⚠️  Tailwind installation failed${NC}"
+      echo -e "${YELLOW}⚠️  Database may already exist${NC}"
     fi
-  fi
-  
-  # Check for esbuild
-  if grep -q "esbuild" mix.exs 2>/dev/null; then
-    section "Installing esbuild"
-    if mix esbuild.install; then
-      echo -e "${GREEN}✅ esbuild installed${NC}"
+    
+    # Run migrations
+    if mix ecto.migrate; then
+      echo -e "${GREEN}✅ Migrations complete${NC}"
     else
-      echo -e "${YELLOW}⚠️  esbuild installation failed${NC}"
+      echo -e "${YELLOW}⚠️  Migrations failed or up to date${NC}"
     fi
   fi
   
-  # Compile assets if Phoenix project
+  # Setup assets for Phoenix projects
   if grep -q "phoenix" mix.exs 2>/dev/null; then
-    section "Compiling assets"
-    if mix assets.deploy 2>/dev/null || mix phx.digest 2>/dev/null; then
-      echo -e "${GREEN}✅ Assets compiled${NC}"
-    else
-      echo -e "${YELLOW}⚠️  Asset compilation skipped${NC}"
+    if [ -d "assets" ]; then
+      section "Installing frontend assets"
+      cd assets
+      if command -v npm >/dev/null 2>&1; then
+        npm install
+        echo -e "${GREEN}✅ Frontend assets installed${NC}"
+      fi
+      cd ..
     fi
   fi
   
-  echo -e "\n${GREEN}✅ Auto-setup complete!${NC}\n"
+  echo -e "\n${GREEN}✅ Setup complete!${NC}\n"
+  
+  # Ask to start the server
+  if grep -q "phoenix" mix.exs 2>/dev/null; then
+    echo -e "${CYAN}Phoenix project detected${NC}"
+    read -p "Start Phoenix server now? (y/n): " -n 1 -r
+    echo ""
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+      echo -e "${GREEN}Starting Phoenix server...${NC}"
+      echo -e "${YELLOW}Press Ctrl+C to stop${NC}"
+      echo ""
+      mix phx.server
+    fi
+  fi
 }
 
 # ============================================
@@ -279,6 +437,9 @@ echo -e "${BLUE}🔍 Elixir Pre-deployment Check${NC}" | tee -a "$REPORT"
 echo "Project: $(basename "$(pwd)")" | tee -a "$REPORT"
 echo "Date: $(date)" | tee -a "$REPORT"
 
+# Check for required tools FIRST
+check_required_tools
+
 # Parse arguments
 RUN_SETUP=false
 if [[ "${1:-}" == "--setup" ]] || [[ "${1:-}" == "-s" ]]; then
@@ -287,8 +448,23 @@ if [[ "${1:-}" == "--setup" ]] || [[ "${1:-}" == "-s" ]]; then
   echo ""
 fi
 
+# Quick dependency check if not running setup
+if [ "$RUN_SETUP" = false ]; then
+  if [ ! -d "deps" ] || [ ! -f "mix.lock" ]; then
+    echo -e "\n${YELLOW}⚠️  Dependencies not installed${NC}"
+    echo -e "Run: ${CYAN}precheck --setup${NC} or ${CYAN}mix deps.get${NC}"
+    echo ""
+  fi
+  
+  # Quick environment check
+  check_environment
+fi
+
+# Run security scan FIRST
+run_security_scan
+
 # === PRE-CHECKS ===
-echo -e "\n${CYAN}╔════════════════════════════════════════╗${NC}"
+echo -e "${CYAN}╔════════════════════════════════════════╗${NC}"
 echo -e "${CYAN}║         RUNNING CHECKS                 ║${NC}"
 echo -e "${CYAN}╚════════════════════════════════════════╝${NC}"
 
@@ -298,62 +474,61 @@ run_check "Naming conventions" \
   "Run: mix credo --checks-without-tag naming for details" \
   "$SEVERITY_MEDIUM"
 
-# 2. Dependency Analysis (HIGH - security implications)
-# Check if mix_audit is available, otherwise use hex.audit
+# 2. Dependency Security (HIGH)
 if mix help deps.audit >/dev/null 2>&1; then
   run_check "Dependency security audit" \
-    "mix deps.get && mix deps.audit" \
-    "Run: mix deps.get && fix reported vulnerabilities" \
+    "mix deps.audit" \
+    "Fix reported vulnerabilities" \
     "$SEVERITY_HIGH"
-    
 elif mix help hex.audit >/dev/null 2>&1; then
   run_check "Dependency security audit (Hex)" \
-    "mix deps.get && mix hex.audit" \
-    "Run: mix hex.audit and update vulnerable dependencies" \
+    "mix hex.audit" \
+    "Update vulnerable dependencies" \
     "$SEVERITY_HIGH"
 else
-  run_check "Dependency installation" \
-    "mix deps.get" \
-    "Run: mix deps.get && consider installing mix_audit for security checks" \
+  run_optional_check "Dependency security audit" \
+    "false" \
+    "Install: mix archive.install hex mix_audit" \
     "$SEVERITY_MEDIUM"
 fi
 
-run_check "Check for outdated dependencies" \
-  "mix deps.outdated --all" \
-  "Run: mix deps.update --all to update dependencies" \
+# 3. Outdated Dependencies (LOW)
+run_check "Outdated dependencies" \
+  "mix hex.outdated --all 2>&1 | grep -q 'All dependencies up to date' || ! mix hex.outdated --all 2>&1 | grep -qE 'Update available|major|minor'" \
+  "Run: mix deps.update --all (review changes carefully)" \
   "$SEVERITY_LOW"
 
-# 3. Unused Dependencies (LOW)
-run_check "Unused dependencies check" \
+# 4. Unused Dependencies (LOW)
+run_check "Unused dependencies" \
   "mix deps.unlock --check-unused" \
   "Run: mix deps.clean --unused" \
   "$SEVERITY_LOW"
 
-# 4. Code Formatting (HIGH - code quality standard)
+# 5. Code Formatting (HIGH)
 run_check "Code formatting" \
   "mix format --check-formatted" \
   "Run: mix format" \
   "$SEVERITY_HIGH"
 
-# 5. Static Analysis (HIGH - code quality)
+# 6. Static Analysis (HIGH)
 run_check "Static analysis (Credo)" \
   "mix credo --strict" \
   "Run: mix credo --strict and fix issues" \
   "$SEVERITY_HIGH"
 
-# 6. Compilation Warnings (CRITICAL - may cause runtime errors)
-run_check "Compilation warnings check" \
+# 7. Compilation Warnings (CRITICAL)
+run_check "Compilation warnings" \
   "mix compile --warnings-as-errors --force" \
   "Fix all compilation warnings before deployment" \
   "$SEVERITY_CRITICAL"
 
-# 7. Test Suite (CRITICAL - core functionality)
+# 8. Test Suite (CRITICAL)
 run_check "Test suite" \
-  "mix test --cover" \
+  "mix test" \
   "Fix failing tests before deployment" \
   "$SEVERITY_CRITICAL"
 
-# 8. Test Coverage (MEDIUM)
+# 9. Test Coverage (MEDIUM)
 if grep -q "excoveralls" mix.exs 2>/dev/null; then
   run_check "Test coverage (>80%)" \
     "mix coveralls.json && jq -e '.coverage > 80' cover/excoveralls.json" \
@@ -361,47 +536,47 @@ if grep -q "excoveralls" mix.exs 2>/dev/null; then
     "$SEVERITY_MEDIUM"
 fi
 
-# 9. Dialyzer (MEDIUM - type safety)
+# 10. Dialyzer (MEDIUM)
 if grep -q "dialyxir" mix.exs 2>/dev/null; then
   run_optional_check "Type checking (Dialyzer)" \
     "mix dialyzer --format short" \
-    "Fix Dialyzer warnings or run: mix dialyzer --format short" \
+    "Fix Dialyzer warnings" \
     "$SEVERITY_MEDIUM"
 fi
 
-# 10. Production Compilation (CRITICAL - deployment blocker)
+# 11. Production Compilation (CRITICAL)
 run_check "Production compilation" \
   "MIX_ENV=prod mix compile --force" \
-  "Run: MIX_ENV=prod mix compile and fix errors" \
+  "Fix production compilation errors" \
   "$SEVERITY_CRITICAL"
 
-# 11. Security Analysis (HIGH - security vulnerabilities)
+# 12. Security Analysis (HIGH)
 if mix help sobelow >/dev/null 2>&1; then
   run_optional_check "Security analysis (Sobelow)" \
     "mix sobelow --exit" \
-    "Review Sobelow findings and address security issues" \
+    "Review and address security issues" \
     "$SEVERITY_HIGH"
 else
   run_optional_check "Security analysis (Sobelow)" \
     "false" \
-    "Install Sobelow: mix archive.install hex sobelow" \
+    "Install: mix archive.install hex sobelow" \
     "$SEVERITY_MEDIUM"
 fi
 
-# 12. Documentation Generation (LOW)
+# 13. Documentation Generation (LOW)
 run_check "Documentation generation" \
   "mix docs" \
-  "Fix documentation errors: mix docs" \
+  "Fix documentation errors" \
   "$SEVERITY_LOW"
 
-# 13. Module Documentation Coverage (LOW)
-run_check "Module documentation check" \
+# 14. Module Documentation (LOW)
+run_check "Module documentation" \
   "! grep -r '@moduledoc false' lib/ 2>/dev/null | grep -v test | grep -v _build | grep -q ." \
   "Add @moduledoc to all public modules" \
   "$SEVERITY_LOW"
 
-# 14. Deprecated Function Usage (MEDIUM)
-run_check "Deprecated functions check" \
+# 15. Deprecated Functions (MEDIUM)
+run_check "Deprecated functions" \
   "! mix xref deprecated 2>&1 | grep -q 'Deprecated'" \
   "Replace deprecated function calls" \
   "$SEVERITY_MEDIUM"
