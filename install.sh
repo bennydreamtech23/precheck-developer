@@ -289,6 +289,7 @@ setup_shell_alias() {
     fi
 }
 
+
 # Show completion message
 show_completion() {
     echo ""
@@ -300,37 +301,36 @@ show_completion() {
     echo ""
     
     echo -e "${CYAN}Quick Start:${NC}"
-    echo "  1. Navigate to your project directory"
-    echo "  2. Run: ${GREEN}precheck${NC}"
-    echo "  3. Review the generated report"
+    echo -e "  1. Navigate to your project directory"
+    echo -e "  2. Run: ${GREEN}precheck${NC}"
+    echo -e "  3. Review the generated report"
     echo ""
     
     echo -e "${CYAN}Available Commands:${NC}"
-    echo "  ${GREEN}precheck${NC}          Run automatic project checks"
-    echo "  ${GREEN}precheck-elixir --setup{NC}  Run checks with automatic project setup for elixir"
-    echo "  ${GREEN}precheck-node --setup{NC}  Run checks with automatic project setup for Nodejs"
-    echo "  ${GREEN}precheck --help${NC}   Show help and options"
-    echo "  ${GREEN}precheck --debug${NC}  Enable debug mode"
+    echo -e "  ${GREEN}precheck${NC}                  Run automatic project checks"
+    echo -e "  ${GREEN}precheck-node --setup${NC}     Run checks with automatic project setup for Nodejs"
+    echo -e "  ${GREEN}precheck --help${NC}           Show help and options"
+    echo -e "  ${GREEN}precheck --debug${NC}          Enable debug mode"
     echo ""
     
     echo -e "${CYAN}Supported Project Types:${NC}"
-    echo "  - Elixir (detected by mix.exs)"
-    echo "  - Node.js (detected by package.json)"
+    echo -e "  - Elixir (detected by mix.exs)"
+    echo -e "  - Node.js (detected by package.json)"
     echo ""
     
     echo -e "${CYAN}Installation Paths:${NC}"
-    echo "  Scripts:  $INSTALL_DIR"
-    echo "  Config:   $CONFIG_FILE"
+    echo -e "  Scripts:  $INSTALL_DIR"
+    echo -e "  Config:   $CONFIG_FILE"
     echo ""
     
     echo -e "${CYAN}Optional Enhancements:${NC}"
-    echo "  For additional shell aliases and helpers, run:"
-    echo "  ${GREEN}bash $INSTALL_DIR/../shell_integration.sh${NC}"
+    echo -e "  For additional shell aliases and helpers, run:"
+    echo -e "  ${GREEN}bash $INSTALL_DIR/../shell_integration.sh${NC}"
     echo ""
     
     echo -e "${CYAN}Need Help?${NC}"
-    echo "  Docs:   https://github.com/bennydreamtech23/precheck-developer"
-    echo "  Issues: https://github.com/bennydreamtech23/precheck-developer/issues"
+    echo -e "  Docs:   https://github.com/bennydreamtech23/precheck-developer"
+    echo -e "  Issues: https://github.com/bennydreamtech23/precheck-developer/issues"
     echo ""
 }
 
