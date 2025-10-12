@@ -62,48 +62,39 @@ load_config() {
     fi
 }
 
-# Enhanced project detection with confidence scoring
+# Enhanced project detection
 detect_project_type() {
-    local confidence=0
-    local project_type=""
-    local script_name=""
-    local features=()
+    local elixir_confidence=0
+    local node_confidence=0
     
     log_info "Detecting project type..."
     
-    # Elixir project detection
+    # Elixir detection
     if [ -f "mix.exs" ]; then
-        confidence=$((confidence + 50))
-        project_type="Elixir"
-        script_name="elixir_precheck.sh"
-        features+=("mix.exs")
-        
-        [ -d "lib/" ] && confidence=$((confidence + 20)) && features+=("lib/")
-        [ -f "config/config.exs" ] && confidence=$((confidence + 15)) && features+=("config/")
-        [ -d "test/" ] && confidence=$((confidence + 15)) && features+=("test/")
+        elixir_confidence=50
+        [ -d "lib/" ] && elixir_confidence=$((elixir_confidence + 20))
+        [ -f "config/config.exs" ] && elixir_confidence=$((elixir_confidence + 15))
+        [ -d "test/" ] && elixir_confidence=$((elixir_confidence + 15))
     fi
     
-    # Node.js project detection
+    # Node.js detection
     if [ -f "package.json" ]; then
-        local node_confidence=50
-        local node_features=("package.json")
-        
+        node_confidence=50
         [ -f "package-lock.json" ] || [ -f "yarn.lock" ] || [ -f "pnpm-lock.yaml" ] && \
-            node_confidence=$((node_confidence + 20)) && node_features+=("lockfile")
-        [ -d "node_modules/" ] && node_confidence=$((node_confidence + 15)) && node_features+=("node_modules/")
-        [ -f "tsconfig.json" ] && node_confidence=$((node_confidence + 15)) && node_features+=("TypeScript")
-        
-        # Use Node.js if confidence is higher or if Elixir wasn't detected
-        if [ $node_confidence -gt $confidence ]; then
-            confidence=$node_confidence
-            project_type="Node.js"
-            script_name="nodejs_precheck.sh"
-            features=("${node_features[@]}")
-        fi
+            node_confidence=$((node_confidence + 20))
+        [ -d "node_modules/" ] && node_confidence=$((node_confidence + 15))
+        [ -f "tsconfig.json" ] && node_confidence=$((node_confidence + 15))
     fi
     
-    # Report detection results
-    if [ $confidence -eq 0 ]; then
+    if [ $elixir_confidence -gt $node_confidence ] && [ $elixir_confidence -gt 0 ]; then
+        export DETECTED_PROJECT_TYPE="Elixir"
+        export DETECTED_SCRIPT_NAME="elixir_precheck.sh"
+        export DETECTION_CONFIDENCE=$elixir_confidence
+    elif [ $node_confidence -gt 0 ]; then
+        export DETECTED_PROJECT_TYPE="Node.js"
+        export DETECTED_SCRIPT_NAME="nodejs_precheck.sh"
+        export DETECTION_CONFIDENCE=$node_confidence
+    else
         log_error "No supported project type detected"
         echo ""
         echo "Supported project types:"
@@ -113,22 +104,23 @@ detect_project_type() {
         return 1
     fi
     
-    log_success "Detected: $project_type project (confidence: $confidence%)"
-    
-    if [ "$DEBUG_MODE" = "true" ]; then
-        log_debug "Detection features: ${features[*]}"
-    fi
-    
-    if [ $confidence -lt 70 ]; then
-        log_warn "Low confidence detection. Results may vary."
-    fi
-    
-    # Export for use in execution
-    export DETECTED_PROJECT_TYPE="$project_type"
-    export DETECTED_SCRIPT_NAME="$script_name"
-    export DETECTION_CONFIDENCE="$confidence"
+    log_success "Detected: $DETECTED_PROJECT_TYPE project (confidence: $DETECTION_CONFIDENCE%)"
+    [ $DETECTION_CONFIDENCE -lt 70 ] && log_warn "Low confidence detection. Results may vary."
     
     return 0
+}
+
+# Detect package manager for Node.js projects
+detect_package_manager() {
+    if [ -f "bun.lockb" ]; then
+        echo "bun"
+    elif [ -f "pnpm-lock.yaml" ]; then
+        echo "pnpm"
+    elif [ -f "yarn.lock" ]; then
+        echo "yarn"
+    else
+        echo "npm"
+    fi
 }
 
 # Run the appropriate precheck script
@@ -212,9 +204,12 @@ parse_args() {
                 export PRECHECK_DEBUG="true"
                 shift
                 ;;
+            --setup|-s)
+                export RUN_SETUP="true"
+                shift
+                ;;
             *)
-                # Pass unknown arguments to the language-specific script
-                break
+                shift
                 ;;
         esac
     done
@@ -222,23 +217,21 @@ parse_args() {
 
 # Main execution
 main() {
-    # Parse arguments first (this may exit early for --help or --version)
     parse_args "$@"
     
-    # Load configuration
     load_config
-    
-    # Show banner
     show_banner
     
-    # Detect project type
     if ! detect_project_type; then
         exit 1
     fi
     
-    # Run the appropriate precheck script
-    run_precheck "$@"
+    # Pass setup flag to language-specific script
+    if [ "${RUN_SETUP:-false}" = "true" ]; then
+        run_precheck --setup
+    else
+        run_precheck
+    fi
 }
 
-# Execute main function with all arguments
-main "$@"SCRIPT_NAME
+main "$@"

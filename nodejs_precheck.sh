@@ -360,9 +360,10 @@ run_security_scan() {
   # Check for committed .env files
   echo -e "\n${BLUE}Checking for committed sensitive files...${NC}"
   
-  if git ls-files 2>/dev/null | grep -E '\.env$|\.env\.local|\.pem$|\.key >/dev/null 2>&1; then
+ if git ls-files 2>/dev/null | grep -E '\.env$|\.env\.local|\.pem$|\.key$' >/dev/null 2>&1; then
+
     echo -e "${RED}⚠️  Found sensitive files in git repository${NC}"
-    git ls-files 2>/dev/null | grep -E '\.env$|\.env\.local|\.pem$|\.key | while read -r file; do
+   git ls-files 2>/dev/null | grep -E '\.env$|\.env\.local|\.pem$|\.key$' | while read -r file; do
       echo -e "     ${RED}✗${NC} $file"
     done
     secrets_found=$((secrets_found + 1))
@@ -482,12 +483,14 @@ PKG_MANAGER=$(detect_package_manager)
 echo "Package Manager: $PKG_MANAGER" | tee -a "$REPORT"
 
 # Parse arguments
+# Parse arguments
 RUN_SETUP=false
 if [[ "${1:-}" == "--setup" ]] || [[ "${1:-}" == "-s" ]]; then
   RUN_SETUP=true
-  auto_setup
+  echo -e "${YELLOW}⚙️  Setup mode enabled - running full checks before automatic setup...${NC}"
   echo ""
 fi
+
 
 # Quick dependency check if not running setup
 if [ "$RUN_SETUP" = false ]; then
@@ -634,6 +637,15 @@ print_summary
 echo -e "\n${BLUE}📋 Report saved to $REPORT${NC}"
 
 # Exit with appropriate code
+# Run automatic setup AFTER all checks if requested
+# Run automatic setup AFTER all checks if requested
+if [ "$RUN_SETUP" = true ]; then
+  echo ""
+  echo -e "${BLUE}🚀 Starting automatic setup...${NC}"
+  auto_setup
+fi
+
+
 if [ $CRITICAL_FAILURES -gt 0 ]; then
   echo -e "${RED}❌ CRITICAL failures detected. Must fix before PR.${NC}"
   exit 2

@@ -307,7 +307,8 @@ show_completion() {
     
     echo -e "${CYAN}Available Commands:${NC}"
     echo "  ${GREEN}precheck${NC}          Run automatic project checks"
-    echo "  ${GREEN}precheck --setup${NC}  Run checks with automatic project setup"
+    echo "  ${GREEN}precheck-elixir --setup{NC}  Run checks with automatic project setup for elixir"
+    echo "  ${GREEN}precheck-node --setup{NC}  Run checks with automatic project setup for Nodejs"
     echo "  ${GREEN}precheck --help${NC}   Show help and options"
     echo "  ${GREEN}precheck --debug${NC}  Enable debug mode"
     echo ""

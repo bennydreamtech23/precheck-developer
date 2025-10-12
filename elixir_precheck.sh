@@ -440,11 +440,12 @@ echo "Date: $(date)" | tee -a "$REPORT"
 # Check for required tools FIRST
 check_required_tools
 
+
 # Parse arguments
 RUN_SETUP=false
 if [[ "${1:-}" == "--setup" ]] || [[ "${1:-}" == "-s" ]]; then
   RUN_SETUP=true
-  auto_setup
+  echo -e "${YELLOW}⚙️  Setup mode enabled - running full checks before automatic setup...${NC}"
   echo ""
 fi
 
@@ -582,11 +583,20 @@ run_check "Deprecated functions" \
   "$SEVERITY_MEDIUM"
 
 # Print summary
+# After all checks
 print_summary
 
 echo -e "\n${BLUE}📋 Report saved to $REPORT${NC}"
 
-# Exit with appropriate code
+# Run automatic setup AFTER all checks if requested
+if [ "$RUN_SETUP" = true ]; then
+  echo ""
+  echo -e "${BLUE}🚀 Starting automatic setup (ignoring critical failures)...${NC}"
+  auto_setup
+fi
+
+
+# === Exit Handling ===
 if [ $CRITICAL_FAILURES -gt 0 ]; then
   echo -e "${RED}❌ CRITICAL failures detected. Must fix before PR.${NC}"
   exit 2
