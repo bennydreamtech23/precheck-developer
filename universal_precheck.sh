@@ -6,6 +6,7 @@ set -euo pipefail
 VERSION="1.0.0-beta"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CONFIG_FILE="$HOME/.precheck_config"
+INSTALL_DIR="$HOME/.precheck"
 
 # Colors
 RED='\033[0;31m'
@@ -59,7 +60,12 @@ load_config() {
         log_debug "Loading configuration from $CONFIG_FILE"
         # shellcheck source=/dev/null
         source "$CONFIG_FILE"
+        # Use PRECHECK_INSTALL_DIR from config if available
+        if [ -n "${PRECHECK_INSTALL_DIR:-}" ]; then
+            INSTALL_DIR="$PRECHECK_INSTALL_DIR"
+        fi
     fi
+    log_debug "Using install directory: $INSTALL_DIR"
 }
 
 # Enhanced project detection
@@ -125,11 +131,20 @@ detect_package_manager() {
 
 # Run the appropriate precheck script
 run_precheck() {
-    local script_path="$SCRIPT_DIR/$DETECTED_SCRIPT_NAME"
+    # First try to find script in INSTALL_DIR, then fallback to SCRIPT_DIR
+    local script_path="$INSTALL_DIR/$DETECTED_SCRIPT_NAME"
     
     if [ ! -f "$script_path" ]; then
-        log_error "Script not found: $script_path"
+        # Fallback to SCRIPT_DIR (for local development/testing)
+        script_path="$SCRIPT_DIR/$DETECTED_SCRIPT_NAME"
+    fi
+    
+    if [ ! -f "$script_path" ]; then
+        log_error "Script not found: $INSTALL_DIR/$DETECTED_SCRIPT_NAME"
         log_info "Run the install script to set up precheck properly"
+        log_debug "Checked locations:"
+        log_debug "  1. $INSTALL_DIR/$DETECTED_SCRIPT_NAME"
+        log_debug "  2. $SCRIPT_DIR/$DETECTED_SCRIPT_NAME"
         return 1
     fi
     
@@ -139,11 +154,13 @@ run_precheck() {
     fi
     
     log_info "Running $DETECTED_PROJECT_TYPE pre-deployment checks..."
+    log_debug "Using script: $script_path"
     echo ""
     
     # Execute the language-specific script with all passed arguments
     exec "$script_path" "$@"
 }
+
 
 # Show help
 show_help() {
