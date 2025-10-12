@@ -169,7 +169,7 @@ copy_local_scripts() {
         "universal_precheck.sh"
         "elixir_precheck.sh"
         "nodejs_precheck.sh"
-        "check_secrets.sh"
+        "check_secret.sh"
     )
     
     for script in "${scripts[@]}"; do
