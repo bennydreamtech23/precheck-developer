@@ -1,4 +1,12 @@
 #!/usr/bin/env bash
+
+
+# Ensure script runs in bash
+if [ -z "$BASH_VERSION" ]; then
+  echo "❌ Please run this installer with bash, not sh."
+  exit 1
+fi
+
 set -euo pipefail
 
 # Precheck Installer v1.0.0-beta
