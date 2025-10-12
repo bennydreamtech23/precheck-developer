@@ -137,7 +137,7 @@ download_scripts() {
     
     mkdir -p "$INSTALL_DIR"
     
-    local base_url="https://raw.githubusercontent.com/bennydreamtech23/precheck-developer/main"
+    local base_url="https://raw.githubusercontent.com/bennydreamtech23/precheck-developer/master"
     local scripts=(
         "universal_precheck.sh"
         "elixir_precheck.sh"
