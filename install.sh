@@ -308,7 +308,7 @@ show_completion() {
     
     echo -e "${CYAN}Available Commands:${NC}"
     echo -e "  ${GREEN}precheck${NC}                  Run automatic project checks"
-    echo -e "  ${GREEN}precheck --setup${NC}          Run checks with automatic project setup"
+    echo -e "  ${GREEN}precheck --setup${NC}          Run checks with automatic project setups"
     echo -e "  ${GREEN}precheck --help${NC}           Show help and options"
     echo -e "  ${GREEN}precheck --debug${NC}          Enable debug mode"
     echo ""
