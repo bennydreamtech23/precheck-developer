@@ -1,12 +1,4 @@
 #!/usr/bin/env bash
-
-
-# Ensure script runs in bash
-if [ -z "$BASH_VERSION" ]; then
-  echo "❌ Please run this installer with bash, not sh."
-  exit 1
-fi
-
 set -euo pipefail
 
 # Precheck Installer v1.0.0-beta
@@ -314,11 +306,11 @@ show_completion() {
     echo ""
     
     echo -e "${CYAN}Available Commands:${NC}"
-    echo -e ${GREEN}precheck${NC}          Run automatic project checks"
-    echo -e ${GREEN}precheck-elixir --setup{NC}  Run checks with automatic project setup for elixir"
-    echo -e ${GREEN}precheck-node --setup{NC}  Run checks with automatic project setup for Nodejs"
-    echo -e  ${GREEN}precheck --help${NC}   Show help and options"
-    echo -e ${GREEN}precheck --debug${NC}  Enable debug mode"
+    echo "  ${GREEN}precheck${NC}          Run automatic project checks"
+    echo "  ${GREEN}precheck-elixir --setup{NC}  Run checks with automatic project setup for elixir"
+    echo "  ${GREEN}precheck-node --setup{NC}  Run checks with automatic project setup for Nodejs"
+    echo "  ${GREEN}precheck --help${NC}   Show help and options"
+    echo "  ${GREEN}precheck --debug${NC}  Enable debug mode"
     echo ""
     
     echo -e "${CYAN}Supported Project Types:${NC}"
