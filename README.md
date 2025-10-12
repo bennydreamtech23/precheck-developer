@@ -15,7 +15,7 @@ A comprehensive pre-deployment validation toolkit for modern development teams. 
 ### One-Line Installation
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/bennydreamtech23/precheck-developer/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/bennydreamtech23/precheck-developer/master/install.sh | bash
 ```
 
 ### Manual Installation
