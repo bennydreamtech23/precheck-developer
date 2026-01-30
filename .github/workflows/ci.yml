@@ -1,50 +1,52 @@
 name: CI
 
 on:
+  workflow_dispatch:
   push:
-    branches: [main]
+    branches:
+      - master
   pull_request:
-    branches: [main]
+    branches: [master]
 
 jobs:
   test-elixir:
     name: Elixir Tests
     runs-on: ubuntu-latest
-    
+
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Setup Elixir
         uses: erlef/setup-beam@v1
         with:
-          elixir-version: '1.15'
-          otp-version: '26'
-      
+          elixir-version: "1.15"
+          otp-version: "26"
+
       - name: Cache deps
         uses: actions/cache@v3
         with:
           path: deps
           key: ${{ runner.os }}-mix-${{ hashFiles('**/mix.lock') }}
-      
+
       - name: Install dependencies
         run: mix deps.get
-      
+
       - name: Check formatting
         run: mix format --check-formatted
-      
+
       - name: Run tests
         run: mix test
 
   test-rust:
     name: Rust Tests
     runs-on: ubuntu-latest
-    
+
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Setup Rust
         uses: dtolnay/rust-action@stable
-      
+
       - name: Cache cargo
         uses: actions/cache@v3
         with:
@@ -53,30 +55,30 @@ jobs:
             ~/.cargo/git
             native/precheck_native/target
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-      
+
       - name: Run tests
         run: cargo test --manifest-path native/precheck_native/Cargo.toml
-      
+
       - name: Check formatting
         run: cargo fmt --manifest-path native/precheck_native/Cargo.toml -- --check
-      
+
       - name: Clippy
         run: cargo clippy --manifest-path native/precheck_native/Cargo.toml -- -D warnings
 
   test-scripts:
     name: Script Tests
     runs-on: ubuntu-latest
-    
+
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Make scripts executable
         run: chmod +x scripts/*.sh
-      
+
       - name: Shellcheck
         uses: ludeeus/action-shellcheck@master
         with:
-          scandir: './scripts'
-      
+          scandir: "./scripts"
+
       - name: Test help output
         run: ./scripts/universal_precheck.sh --help
