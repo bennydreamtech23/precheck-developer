@@ -1,0 +1,87 @@
+name: Build and Release
+
+on:
+  push:
+    tags: ["v*"]
+
+jobs:
+  build:
+    name: Build ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: linux-x64
+            rust_target: x86_64-unknown-linux-gnu
+          - os: macos-latest
+            target: darwin-arm64
+            rust_target: aarch64-apple-darwin
+          - os: macos-13
+            target: darwin-x64
+            rust_target: x86_64-apple-darwin
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-action@stable
+        with:
+          targets: ${{ matrix.rust_target }}
+
+      - name: Build Rust binary
+        run: |
+          cd native/precheck_native
+          cargo build --release --target ${{ matrix.rust_target }}
+          mkdir -p ../../dist/bin
+          cp target/${{ matrix.rust_target }}/release/precheck-native ../../dist/bin/ || \
+          cp target/${{ matrix.rust_target }}/release/precheck_native ../../dist/bin/precheck-native
+
+      - name: Copy scripts
+        run: |
+          mkdir -p dist/scripts
+          cp scripts/*.sh dist/scripts/
+          chmod +x dist/scripts/*.sh
+          cp README.md LICENSE dist/ 2>/dev/null || true
+
+      - name: Create tarball
+        run: |
+          cd dist
+          tar -czf ../precheck-${{ github.ref_name }}-${{ matrix.target }}.tar.gz .
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: precheck-${{ matrix.target }}
+          path: precheck-${{ github.ref_name }}-${{ matrix.target }}.tar.gz
+
+  release:
+    name: Create Release
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: artifacts/*.tar.gz
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Trigger public repo publish
+        if: success()
+        run: |
+          curl -X POST \
+            -H "Authorization: token ${{ secrets.PUBLIC_REPO_TOKEN }}" \
+            -H "Accept: application/vnd.github.v3+json" \
+            https://api.github.com/repos/bennydreamtech23/precheck/actions/workflows/publish-release.yml/dispatches \
+            -d '{"ref":"main","inputs":{"version":"${{ github.ref_name }}"}}'

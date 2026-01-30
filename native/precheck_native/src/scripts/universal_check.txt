@@ -1,0 +1,4 @@
+# Universal precheck - embedded logic
+# This content is compiled into the binary
+CHECK_VERSION=1.0.0
+CHECKS=secrets,env,deps

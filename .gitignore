@@ -1,0 +1,29 @@
+# Elixir
+/_build/
+/deps/
+/*.ez
+*.beam
+.elixir_ls/
+erl_crash.dump
+
+# Rust
+/native/precheck_native/target/
+
+# Environment
+.env
+.env.*
+*.pem
+*.key
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Release artifacts (built locally)
+/dist/
+*.tar.gz

@@ -1,3 +1,53 @@
+# Precheck Developer
+
+> ⚠️ **Private Repository** - This is the development repository for Precheck.
+
+For user installation, visit: https://github.com/bennydreamtech23/precheck
+
+## Development Setup
+
+```bash
+# Clone
+git clone git@github.com:bennydreamtech23/precheck-developer.git
+cd precheck-developer
+
+# Install Elixir dependencies
+mix deps.get
+
+# Build Rust native module
+cd native/precheck_native
+cargo build --release
+cd ../..
+
+# Run tests
+mix test
+cargo test --manifest-path native/precheck_native/Cargo.toml
+
+# Test scripts
+./scripts/universal_precheck.sh --help
+```
+
+## Project Structure
+
+- `lib/` - Elixir source code
+- `native/` - Rust NIF modules
+- `scripts/` - Shell scripts (packaged for distribution)
+- `test/` - Test files
+
+## Release Process
+
+```bash
+# 1. Update version in mix.exs
+# 2. Update CHANGELOG.md
+# 3. Tag and push
+git tag v1.0.0
+git push origin --tags
+```
+
+GitHub Actions will automatically build and publish to the public repo.
+
+---
+
 # Developer Precheck v1.0.0-beta
 
 A comprehensive pre-deployment validation toolkit for modern development teams. Automatically detects your project type and runs intelligent checks to ensure deployment readiness.

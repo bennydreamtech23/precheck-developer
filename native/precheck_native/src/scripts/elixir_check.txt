@@ -1,0 +1,3 @@
+# Elixir check - embedded logic
+CHECK_FILES=mix.exs,mix.lock
+CHECK_DIRS=lib,test
