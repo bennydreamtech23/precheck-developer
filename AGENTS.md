@@ -4,6 +4,43 @@
 
 ---
 
+## 🛠️ CI/CD Troubleshooting (STAR Methodology)
+
+### Example Error: `mix: command not found`
+
+#### **Situation**
+During the public repository's GitHub Actions workflow, the pipeline attempts to build the Elixir/Rust binary by running `mix` commands after cloning the private repository.
+
+#### **Task**
+The goal is to build the `precheck` binary from source using Elixir's build tool (`mix`) as part of the automated release process.
+
+#### **Action**
+The workflow runs:
+```bash
+mix deps.get
+mix escript.build
+```
+However, the runner environment does **not** have Elixir (and thus `mix`) installed by default.
+
+#### **Result**
+The step fails with:
+```
+/home/runner/.../script.sh: line 2: mix: command not found
+Error: Process completed with exit code 127.
+```
+This halts the build and prevents the binary from being packaged and released.
+
+---
+
+### ⭐ **Key Takeaways for Secure Automated Releases**
+
+- **Always ensure required build tools (Elixir, Rust, etc.) are installed in the CI/CD environment before running build commands.**
+- **Add explicit setup steps in your workflow to install Elixir and Rust before building.**
+- **Do not assume the runner has language-specific tools pre-installed.**
+- **This is critical for security and reproducibility, as public users should only receive pre-built, tested binaries.**
+
+---
+
 ## 🏗️ Repository Architecture
 
 | Repository | Purpose | Contains |
