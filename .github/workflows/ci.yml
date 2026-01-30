@@ -44,8 +44,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Rust
-        uses: dtolnay/rust-action@stable
+       - name: Setup Rust
+         uses: actions-rs/toolchain@v1
+         with:
+           toolchain: stable
+           override: true
 
       - name: Cache cargo
         uses: actions/cache@v3
@@ -75,10 +78,9 @@ jobs:
       - name: Make scripts executable
         run: chmod +x scripts/*.sh
 
-      - name: Shellcheck
-        uses: ludeeus/action-shellcheck@master
-        with:
-          scandir: "./scripts"
-
-      - name: Test help output
-        run: ./scripts/universal_precheck.sh --help
+       - name: Shellcheck
+         uses: ludeeus/action-shellcheck@master
+         with:
+           scandir: './scripts'
+       - name: Test help output
+         run: ./scripts/universal_precheck.sh --help
