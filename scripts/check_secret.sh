@@ -124,7 +124,7 @@ fi
 
 # Check for hardcoded IPs
 echo -e "${BLUE}Checking for hardcoded IP addresses...${NC}"
-if ip_matches=$(grep -rniE $EXCLUDE_ARGS '\b([0-9]{1,3}\.){3}[0-9]{1,3}\b' . 2>/dev/null | grep -v "127.0.0.1\|0.0.0.0\|localhost"); then
+if ip_matches=$(grep -rniE "$EXCLUDE_ARGS" '\b([0-9]{1,3}\.){3}[0-9]{1,3}\b' . 2>/dev/null | grep -v "127.0.0.1\|0.0.0.0\|localhost"); then
   if [ -n "$ip_matches" ]; then
     echo -e "${YELLOW}⚠️  Found hardcoded IP addresses:${NC}" | tee -a "$REPORT"
     echo "$ip_matches" | head -5 | while IFS= read -r line; do

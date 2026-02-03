@@ -67,7 +67,8 @@ run_check() {
     ((PASSED_TESTS++))
     return 0
   else
-    local sev_color=$(get_severity_color "$severity")
+    local sev_color
+    sev_color=$(get_severity_color "$severity")
     echo -e "${RED}❌ $description failed ${sev_color}[$severity]${NC}" | tee -a "$REPORT"
     ((FAILED_TESTS++))
     FAILED_REASONS+=("$description [$severity]")
@@ -112,7 +113,8 @@ run_optional_check() {
     ((PASSED_TESTS++))
     return 0
   else
-    local sev_color=$(get_severity_color "$severity")
+    local sev_color
+    sev_color=$(get_severity_color "$severity")
     echo -e "${RED}❌ $description failed ${sev_color}[$severity]${NC}" | tee -a "$REPORT"
     ((FAILED_TESTS++))
     FAILED_REASONS+=("$description [$severity]")
@@ -258,7 +260,8 @@ check_environment() {
     echo -e "   Make sure all required env vars are set"
     
     # List required env vars
-    local required_vars=$(grep -r "System.get_env" config/ 2>/dev/null | grep "!" | sed 's/.*System.get_env("\([^"]*\)").*/\1/' | sort -u)
+    local required_vars
+    required_vars=$(grep -r "System.get_env" config/ 2>/dev/null | grep "!" | sed 's/.*System.get_env("\([^"]*\)").*/\1/' | sort -u)
     if [ -n "$required_vars" ]; then
       echo -e "   ${CYAN}Required variables:${NC}"
       echo "$required_vars" | while read -r var; do
@@ -404,7 +407,7 @@ auto_setup() {
   if grep -q "phoenix" mix.exs 2>/dev/null; then
     if [ -d "assets" ]; then
       section "Installing frontend assets"
-      cd assets
+      cd assets || return 1
       if command -v npm >/dev/null 2>&1; then
         npm install
         echo -e "${GREEN}✅ Frontend assets installed${NC}"

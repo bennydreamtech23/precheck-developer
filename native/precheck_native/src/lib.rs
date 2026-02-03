@@ -1,5 +1,5 @@
-mod scanner;
 mod embedded;
+mod scanner;
 
 use regex::Regex;
 use rustler::{Encoder, Env, NifResult, NifStruct, Term};

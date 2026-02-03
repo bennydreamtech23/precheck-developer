@@ -162,7 +162,8 @@ download_scripts() {
 copy_local_scripts() {
     log_info "Installing from local repository..."
     
-    local script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    local script_dir
+    script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
     mkdir -p "$INSTALL_DIR"
     
     local scripts=(
@@ -272,9 +273,11 @@ setup_shell_alias() {
     # Add alias if not already present
     if [ -f "$shell_rc" ]; then
         if ! grep -q "alias precheck=" "$shell_rc" 2>/dev/null; then
-            echo "" >> "$shell_rc"
-            echo "# Precheck alias - added by installer" >> "$shell_rc"
-            echo "$alias_line" >> "$shell_rc"
+            {
+                echo ""
+                echo "# Precheck alias - added by installer"
+                echo "$alias_line"
+            } >> "$shell_rc"
             log_success "Alias added to $shell_rc"
             echo ""
             log_warn "Run: source $shell_rc (or restart your shell)"

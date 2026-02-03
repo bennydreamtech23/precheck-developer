@@ -67,7 +67,8 @@ run_check() {
     ((PASSED_TESTS++))
     return 0
   else
-    local sev_color=$(get_severity_color "$severity")
+    local sev_color
+    sev_color=$(get_severity_color "$severity")
     echo -e "${RED}❌ $description failed ${sev_color}[$severity]${NC}" | tee -a "$REPORT"
     ((FAILED_TESTS++))
     FAILED_REASONS+=("$description [$severity]")
@@ -112,7 +113,8 @@ run_optional_check() {
     ((PASSED_TESTS++))
     return 0
   else
-    local sev_color=$(get_severity_color "$severity")
+    local sev_color
+    sev_color=$(get_severity_color "$severity")
     echo -e "${RED}❌ $description failed ${sev_color}[$severity]${NC}" | tee -a "$REPORT"
     ((FAILED_TESTS++))
     FAILED_REASONS+=("$description [$severity]")
@@ -393,7 +395,8 @@ auto_setup() {
   echo -e "${CYAN}║    AUTOMATIC PROJECT SETUP             ║${NC}"
   echo -e "${CYAN}╚════════════════════════════════════════╝${NC}\n"
   
-  local pkg_manager=$(detect_package_manager)
+  local pkg_manager
+  pkg_manager=$(detect_package_manager)
   echo -e "Package Manager: ${CYAN}$pkg_manager${NC}\n"
   
   # Check environment first

@@ -229,7 +229,8 @@ add_dev_aliases() {
     
     log_info "Adding development workflow aliases..."
     
-    local shell_configs=$(detect_shells)
+    local shell_configs
+    shell_configs=$(detect_shells)
     
     for config_info in $shell_configs; do
         local config_file="${config_info%%:*}"
@@ -495,7 +496,8 @@ main() {
     fi
     
     # Detect and integrate shells
-    local shell_configs=$(detect_shells)
+    local shell_configs
+    shell_configs=$(detect_shells)
     
     if [ -z "$shell_configs" ]; then
         log_error "No shell configuration files found"
