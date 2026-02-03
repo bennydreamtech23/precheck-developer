@@ -65,6 +65,7 @@ for pattern_name in "${!PATTERNS[@]}"; do
   echo -e "${BLUE}Checking for: $pattern_name${NC}"
   
   # Use grep to find matches
+  # shellcheck disable=SC2086
   if matches=$(grep -rniE $EXCLUDE_ARGS "$pattern" . 2>/dev/null); then
     echo -e "${RED}⚠️  Found potential $pattern_name:${NC}" | tee -a "$REPORT"
     echo "$matches" | while IFS= read -r line; do
@@ -124,7 +125,8 @@ fi
 
 # Check for hardcoded IPs
 echo -e "${BLUE}Checking for hardcoded IP addresses...${NC}"
-if ip_matches=$(grep -rniE "$EXCLUDE_ARGS" '\b([0-9]{1,3}\.){3}[0-9]{1,3}\b' . 2>/dev/null | grep -v "127.0.0.1\|0.0.0.0\|localhost"); then
+# shellcheck disable=SC2086
+if ip_matches=$(grep -rniE $EXCLUDE_ARGS '\b([0-9]{1,3}\.){3}[0-9]{1,3}\b' . 2>/dev/null | grep -v "127.0.0.1\|0.0.0.0\|localhost"); then
   if [ -n "$ip_matches" ]; then
     echo -e "${YELLOW}⚠️  Found hardcoded IP addresses:${NC}" | tee -a "$REPORT"
     echo "$ip_matches" | head -5 | while IFS= read -r line; do

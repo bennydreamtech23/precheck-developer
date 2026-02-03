@@ -4,11 +4,8 @@
 //! They are decrypted in memory at runtime and executed.
 //! This prevents users from extracting raw script source code.
 
-use aes_gcm::{
-    aead::{Aead, KeyInit},
-    Aes256Gcm, Nonce,
-};
-use sha2::{Digest, Sha256};
+use aes_gcm::{ aead::{ Aead, KeyInit }, Aes256Gcm, Nonce };
+use sha2::{ Digest, Sha256 };
 
 /// Encryption key derived at compile time (in production, use secure key management)
 const ENCRYPTION_SALT: &[u8] = b"precheck_secure_v1_2024";
@@ -27,8 +24,7 @@ static EMBEDDED_SCRIPTS: &[(&str, &str)] = &[
 
 pub fn execute(script_name: &str, args: &[String]) -> Result<String, String> {
     // Find the script
-    let script_content = EMBEDDED_SCRIPTS
-        .iter()
+    let script_content = EMBEDDED_SCRIPTS.iter()
         .find(|(name, _)| *name == script_name)
         .map(|(_, content)| *content)
         .ok_or_else(|| format!("Script '{}' not found", script_name))?;
@@ -38,7 +34,10 @@ pub fn execute(script_name: &str, args: &[String]) -> Result<String, String> {
 }
 
 fn execute_check(name: &str, _content: &str, args: &[String]) -> Result<String, String> {
-    let path = args.first().map(|s| s.as_str()).unwrap_or(".");
+    let path = args
+        .first()
+        .map(|s| s.as_str())
+        .unwrap_or(".");
 
     match name {
         "secrets" => {
@@ -51,8 +50,7 @@ fn execute_check(name: &str, _content: &str, args: &[String]) -> Result<String, 
         }
         "universal" => {
             // Run all checks
-            let mut output = Vec::new();
-            output.push(execute_check("secrets", "", args)?);
+            let output = vec![execute_check("secrets", "", args)?];
             Ok(output.join("\n"))
         }
         _ => Ok(format!("Check '{}' completed", name)),

@@ -1,8 +1,7 @@
 mod embedded;
 mod scanner;
 
-use regex::Regex;
-use rustler::{Encoder, Env, NifResult, NifStruct, Term};
+use rustler::NifStruct;
 
 #[derive(Debug, NifStruct)]
 #[module = "Precheck.Native.ScanResult"]
@@ -30,14 +29,7 @@ fn execute_script(script_name: String, args: Vec<String>) -> Result<String, Stri
 
 #[rustler::nif]
 fn list_checks() -> Vec<String> {
-    vec![
-        "secrets".to_string(),
-        "environment".to_string(),
-        "dependencies".to_string(),
-    ]
+    vec!["secrets".to_string(), "environment".to_string(), "dependencies".to_string()]
 }
 
-rustler::init!(
-    "Elixir.Precheck.Native",
-    [run_checks, scan_secrets, execute_script, list_checks]
-);
+rustler::init!("Elixir.Precheck.Native");

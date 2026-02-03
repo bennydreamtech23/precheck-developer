@@ -8,26 +8,14 @@ const PATTERNS: &[(&str, &str)] = &[
     (r"AKIA[0-9A-Z]{16}", "AWS Access Key"),
     (r"ABIA[0-9A-Z]{16}", "AWS Access Key"),
     (r"ACCA[0-9A-Z]{16}", "AWS Access Key"),
-    (
-        r#"(?i)password\s*[:=]\s*['"][^'"]{4,}['"]"#,
-        "Hardcoded Password",
-    ),
+    (r#"(?i)password\s*[:=]\s*['"][^'"]{4,}['"]"#, "Hardcoded Password"),
     (r#"(?i)api[_-]?key\s*[:=]\s*['"][^'"]{8,}['"]"#, "API Key"),
-    (
-        r#"(?i)secret\s*[:=]\s*['"][^'"]{4,}['"]"#,
-        "Hardcoded Secret",
-    ),
-    (
-        r"-----BEGIN (?:RSA|DSA|EC|OPENSSH|PGP) PRIVATE KEY-----",
-        "Private Key",
-    ),
+    (r#"(?i)secret\s*[:=]\s*['"][^'"]{4,}['"]"#, "Hardcoded Secret"),
+    (r"-----BEGIN (?:RSA|DSA|EC|OPENSSH|PGP) PRIVATE KEY-----", "Private Key"),
     (r"ghp_[a-zA-Z0-9]{36}", "GitHub Personal Access Token"),
     (r"gho_[a-zA-Z0-9]{36}", "GitHub OAuth Token"),
     (r"sk-[a-zA-Z0-9]{48}", "OpenAI API Key"),
-    (
-        r"xox[baprs]-[0-9]{10,13}-[0-9]{10,13}-[a-zA-Z0-9]{24}",
-        "Slack Token",
-    ),
+    (r"xox[baprs]-[0-9]{10,13}-[0-9]{10,13}-[a-zA-Z0-9]{24}", "Slack Token"),
 ];
 
 /// Files/directories to skip
@@ -47,8 +35,7 @@ pub fn scan_directory(path: &str) -> Result<Vec<ScanResult>, String> {
 
     for entry in WalkDir::new(path)
         .into_iter()
-        .filter_entry(|e| !should_skip(e.path().to_str().unwrap_or("")))
-    {
+        .filter_entry(|e| !should_skip(e.path().to_str().unwrap_or(""))) {
         let entry = entry.map_err(|e| e.to_string())?;
 
         if entry.file_type().is_file() {
@@ -94,8 +81,8 @@ pub fn scan_content(content: &str, filename: &str) -> Vec<ScanResult> {
 
 fn should_skip(path: &str) -> bool {
     SKIP_PATTERNS.iter().any(|pattern| {
-        if pattern.starts_with('*') {
-            path.ends_with(&pattern[1..])
+        if let Some(stripped) = pattern.strip_prefix('*') {
+            path.ends_with(stripped)
         } else {
             path.contains(pattern)
         }
