@@ -29,11 +29,7 @@ fn execute_script(script_name: String, args: Vec<String>) -> Result<String, Stri
 
 #[rustler::nif]
 fn list_checks() -> Vec<String> {
-    vec![
-        "secrets".to_string(),
-        "environment".to_string(),
-        "dependencies".to_string(),
-    ]
+    vec!["secrets".to_string(), "environment".to_string(), "dependencies".to_string()]
 }
 
 rustler::init!("Elixir.Precheck.Native");
