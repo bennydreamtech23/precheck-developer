@@ -51,7 +51,7 @@ fn execute_check(name: &str, _content: &str, args: &[String]) -> Result<String, 
         }
         "universal" => {
             // Run all checks
-            let output = vec![execute_check("secrets", "", args)?];
+            let output = [execute_check("secrets", "", args)?];
             Ok(output.join("\n"))
         }
         _ => Ok(format!("Check '{}' completed", name)),
