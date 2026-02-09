@@ -42,11 +42,13 @@ jobs:
           cd native/precheck_native
           cargo build --release --target ${{ matrix.rust_target }}
           mkdir -p ../../dist/bin
-          # Try both possible binary names, fail if neither exists
-          if [ -f target/${{ matrix.rust_target }}/release/precheck_native ]; then
-            cp target/${{ matrix.rust_target }}/release/precheck_native ../../dist/bin/precheck-native
-          elif [ -f target/${{ matrix.rust_target }}/release/precheck-native ]; then
-            cp target/${{ matrix.rust_target }}/release/precheck-native ../../dist/bin/
+          # Always copy and rename the binary to precheck-native for consistency
+          BIN1=target/${{ matrix.rust_target }}/release/precheck_native
+          BIN2=target/${{ matrix.rust_target }}/release/precheck-native
+          if [ -f "$BIN1" ]; then
+            cp "$BIN1" ../../dist/bin/precheck-native
+          elif [ -f "$BIN2" ]; then
+            cp "$BIN2" ../../dist/bin/precheck-native
           else
             echo "Rust binary not found!"
             exit 1
