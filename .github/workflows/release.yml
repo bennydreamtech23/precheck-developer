@@ -19,9 +19,6 @@ jobs:
           - os: macos-latest
             target: darwin-arm64
             rust_target: aarch64-apple-darwin
-          - os: macos-13
-            target: darwin-x64
-            rust_target: x86_64-apple-darwin
 
     steps:
       - uses: actions/checkout@v4
