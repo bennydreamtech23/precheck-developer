@@ -37,16 +37,16 @@ jobs:
         with:
           targets: ${{ matrix.rust_target }}
 
-        - name: Build Rust binary
+      - name: Build Rust binary
         run: |
           cd native/precheck_native
           cargo build --release --target ${{ matrix.rust_target }}
           mkdir -p ../../dist/bin
-          
+
           # List what was built (for debugging)
           echo "Built files:"
           ls -la target/${{ matrix.rust_target }}/release/
-          
+
           # Try to find and copy the binary/library
           if [ -f "target/${{ matrix.rust_target }}/release/precheck_native" ]; then
             cp "target/${{ matrix.rust_target }}/release/precheck_native" ../../dist/bin/precheck-native
@@ -58,8 +58,7 @@ jobs:
             echo "ERROR: No binary or library found!"
             exit 1
           fi
-    
-  
+
       - name: Copy scripts
         run: |
           mkdir -p dist/scripts
