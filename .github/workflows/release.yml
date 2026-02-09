@@ -103,4 +103,4 @@ jobs:
           curl -X POST \
             -H "Accept: application/vnd.github.v3+json" \
             https://api.github.com/repos/bennydreamtech23/precheck/actions/workflows/publish-release.yml/dispatches \
-            -d '{"ref":"main","inputs":{"version":"${{ github.ref_name }}"}}'
+            -d '{"ref":"master","inputs":{"version":"${{ github.ref_name }}"}}'
