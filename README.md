@@ -15,7 +15,7 @@ cd precheck-developer
 mix deps.get
 
 # Build Rust native module
-cd native/precheck_native
+cd native/precheck_native      # Correct path for Rust NIF module
 cargo build --release
 cd ../..
 

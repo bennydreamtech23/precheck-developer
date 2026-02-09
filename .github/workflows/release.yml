@@ -26,6 +26,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Setup Elixir
+        uses: erlef/setup-beam@v1
+        with:
+          elixir-version: "1.16"
+          otp-version: "26"
+
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
         with:
@@ -36,8 +42,15 @@ jobs:
           cd native/precheck_native
           cargo build --release --target ${{ matrix.rust_target }}
           mkdir -p ../../dist/bin
-          cp target/${{ matrix.rust_target }}/release/precheck-native ../../dist/bin/ || \
-          cp target/${{ matrix.rust_target }}/release/precheck_native ../../dist/bin/precheck-native
+          # Try both possible binary names, fail if neither exists
+          if [ -f target/${{ matrix.rust_target }}/release/precheck_native ]; then
+            cp target/${{ matrix.rust_target }}/release/precheck_native ../../dist/bin/precheck-native
+          elif [ -f target/${{ matrix.rust_target }}/release/precheck-native ]; then
+            cp target/${{ matrix.rust_target }}/release/precheck-native ../../dist/bin/
+          else
+            echo "Rust binary not found!"
+            exit 1
+          fi
 
       - name: Copy scripts
         run: |
@@ -84,7 +97,6 @@ jobs:
         if: success()
         run: |
           curl -X POST \
-            -H "Authorization: token ${{ secrets.PUBLIC_REPO_TOKEN }}" \
             -H "Accept: application/vnd.github.v3+json" \
             https://api.github.com/repos/bennydreamtech23/precheck/actions/workflows/publish-release.yml/dispatches \
             -d '{"ref":"main","inputs":{"version":"${{ github.ref_name }}"}}'
