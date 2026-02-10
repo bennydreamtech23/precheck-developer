@@ -23,6 +23,22 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Create tag if manual deployment
+        if: github.event_name == 'workflow_dispatch'
+          run: |
+          TAG_NAME=${{ github.ref_name }}
+          if [ -z "$TAG_NAME" ] || [ "$TAG_NAME" == "refs/heads/main" ]; then
+            echo "No tag found from ref. Please create a tag manually or update workflow to accept a tag input."
+            exit 1
+          fi
+          git fetch --tags
+          if git rev-parse "$TAG_NAME" >/dev/null 2>&1; then
+            echo "Tag $TAG_NAME already exists."
+          else
+            git tag "$TAG_NAME"
+            git push origin "$TAG_NAME"
+          fi
+
       - name: Setup Elixir
         uses: erlef/setup-beam@v1
         with:
