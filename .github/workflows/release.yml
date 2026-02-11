@@ -53,39 +53,51 @@ jobs:
         with:
           targets: ${{ matrix.rust_target }}
 
-      - name: Build Rust binary
+      - name: Get Elixir dependencies
         run: |
-          cd native/precheck_native
-          cargo build --release --target ${{ matrix.rust_target }}
-          mkdir -p ../../dist/bin
+          mix local.hex --force
+          mix local.rebar --force
+          mix deps.get
 
-          # List what was built (for debugging)
-          echo "Built files:"
-          ls -la target/${{ matrix.rust_target }}/release/
+      - name: Build Elixir escript (includes Rust NIF compilation)
+        env:
+          RUSTFLAGS: "-C target-cpu=native"
+        run: |
+          # Compile the project (this automatically compiles the Rust NIF)
+          mix compile
 
-          # Try to find and copy the binary/library
-          if [ -f "target/${{ matrix.rust_target }}/release/precheck_native" ]; then
-            cp "target/${{ matrix.rust_target }}/release/precheck_native" ../../dist/bin/precheck-native
-          elif [ -f "target/${{ matrix.rust_target }}/release/libprecheck_native.so" ]; then
-            cp "target/${{ matrix.rust_target }}/release/libprecheck_native.so" ../../dist/bin/precheck-native
-          elif [ -f "target/${{ matrix.rust_target }}/release/libprecheck_native.dylib" ]; then
-            cp "target/${{ matrix.rust_target }}/release/libprecheck_native.dylib" ../../dist/bin/precheck-native
-          else
-            echo "ERROR: No binary or library found!"
-            exit 1
-          fi
+          # Build the escript executable
+          mix escript.build
 
-      - name: Copy scripts
+          echo "✅ Escript built successfully!"
+          ls -lah precheck
+          file precheck
+
+      - name: Prepare release artifacts
+        run: |
+          mkdir -p dist/bin
+
+          # Copy the escript (the Rust NIF is embedded in it)
+          cp precheck dist/bin/precheck
+          chmod +x dist/bin/precheck
+
+          echo "📦 Release artifacts ready:"
+          ls -lah dist/bin/
+
+      - name: Copy additional files
         run: |
           mkdir -p dist/scripts
-          cp scripts/*.sh dist/scripts/
-          chmod +x dist/scripts/*.sh
+          cp scripts/*.sh dist/scripts/ 2>/dev/null || true
+          chmod +x dist/scripts/*.sh 2>/dev/null || true
           cp README.md LICENSE dist/ 2>/dev/null || true
 
       - name: Create tarball
         run: |
           cd dist
           tar -czf ../precheck-${{ github.ref_name }}-${{ matrix.target }}.tar.gz .
+
+          echo "✅ Tarball created:"
+          ls -lah ../precheck-${{ github.ref_name }}-${{ matrix.target }}.tar.gz
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
