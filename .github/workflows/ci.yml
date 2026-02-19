@@ -1,18 +1,18 @@
 name: CI
 
 on:
-  workflow_dispatch:
+  workflow_dispatch: {}
   push:
     branches:
       - master
   pull_request:
-    branches: [master]
+    branches:
+      - master
 
 jobs:
   test-elixir:
     name: Elixir Tests
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v4
 
@@ -40,15 +40,11 @@ jobs:
   test-rust:
     name: Rust Tests
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v4
 
       - name: Setup Rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          override: true
+        uses: dtolnay/rust-toolchain@stable
 
       - name: Cache cargo
         uses: actions/cache@v3
@@ -71,7 +67,6 @@ jobs:
   test-scripts:
     name: Script Tests
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v4
 
@@ -81,7 +76,7 @@ jobs:
       - name: Shellcheck
         uses: ludeeus/action-shellcheck@master
         with:
-          scandir: "./scripts"
+          scandir: ./scripts
 
       - name: Test help output
         run: ./scripts/universal_precheck.sh --help
