@@ -40,7 +40,7 @@ defmodule Precheck.Native do
 
   defp nif_extension do
     case :os.type() do
-      {:unix, :darwin} -> ".dylib"
+      {:win32, _} -> ".dll"
       _ -> ".so"
     end
   end

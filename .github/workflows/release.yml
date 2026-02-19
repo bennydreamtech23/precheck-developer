@@ -75,14 +75,24 @@ jobs:
 
       - name: Prepare release artifacts
         run: |
-          mkdir -p dist/bin
+          mkdir -p dist/bin dist/priv/native
 
-          # Copy the escript (the Rust NIF is embedded in it)
+          # Copy the escript
           cp precheck dist/bin/precheck
           chmod +x dist/bin/precheck
 
+          # Copy the compiled NIF for runtime loading
+          NIF_FILE="$(find priv/native -maxdepth 1 -type f -name 'precheck_native.*' | head -1)"
+          if [ -z "$NIF_FILE" ]; then
+            echo "❌ Compiled NIF not found under priv/native"
+            ls -lah priv/native || true
+            exit 1
+          fi
+          cp "$NIF_FILE" "dist/priv/native/$(basename "$NIF_FILE")"
+
           echo "📦 Release artifacts ready:"
           ls -lah dist/bin/
+          ls -lah dist/priv/native/
 
       - name: Copy additional files
         run: |
