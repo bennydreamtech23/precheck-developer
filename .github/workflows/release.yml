@@ -102,6 +102,18 @@ jobs:
         run: |
           cp README.md LICENSE dist/ 2>/dev/null || true
 
+      - name: Enforce compiled-only public artifact
+        run: |
+          if [ -d dist/scripts ]; then
+            echo "❌ dist/scripts must not be shipped in public artifacts."
+            exit 1
+          fi
+          if ls dist/*.sh >/dev/null 2>&1; then
+            echo "❌ Shell scripts must not be shipped in public artifacts."
+            exit 1
+          fi
+          echo "✅ Public artifact policy check passed (compiled-only)."
+
       - name: Create tarball
         run: |
           cd dist
