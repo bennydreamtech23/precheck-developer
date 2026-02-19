@@ -77,9 +77,13 @@ jobs:
         run: |
           mkdir -p dist/bin dist/priv/native
 
-          # Copy the escript
+          # Copy the compiled CLI core.
+          # Keep "precheck" for backward compatibility and publish "precheck-core"
+          # as the explicit stable command name for installers.
           cp precheck dist/bin/precheck
+          cp precheck dist/bin/precheck-core
           chmod +x dist/bin/precheck
+          chmod +x dist/bin/precheck-core
 
           # Copy the compiled NIF for runtime loading
           NIF_FILE="$(find priv/native -maxdepth 1 -type f -name 'precheck_native.*' | head -1)"
@@ -96,24 +100,29 @@ jobs:
 
       - name: Copy additional files
         run: |
-          mkdir -p dist/scripts
-          cp scripts/*.sh dist/scripts/ 2>/dev/null || true
-          chmod +x dist/scripts/*.sh 2>/dev/null || true
           cp README.md LICENSE dist/ 2>/dev/null || true
 
       - name: Create tarball
         run: |
           cd dist
           tar -czf ../precheck-${{ github.ref_name }}-${{ matrix.target }}.tar.gz .
+          if command -v sha256sum >/dev/null 2>&1; then
+            sha256sum ../precheck-${{ github.ref_name }}-${{ matrix.target }}.tar.gz > ../precheck-${{ github.ref_name }}-${{ matrix.target }}.tar.gz.sha256
+          else
+            shasum -a 256 ../precheck-${{ github.ref_name }}-${{ matrix.target }}.tar.gz > ../precheck-${{ github.ref_name }}-${{ matrix.target }}.tar.gz.sha256
+          fi
 
           echo "✅ Tarball created:"
           ls -lah ../precheck-${{ github.ref_name }}-${{ matrix.target }}.tar.gz
+          ls -lah ../precheck-${{ github.ref_name }}-${{ matrix.target }}.tar.gz.sha256
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: precheck-${{ matrix.target }}
-          path: precheck-${{ github.ref_name }}-${{ matrix.target }}.tar.gz
+          path: |
+            precheck-${{ github.ref_name }}-${{ matrix.target }}.tar.gz
+            precheck-${{ github.ref_name }}-${{ matrix.target }}.tar.gz.sha256
 
   release:
     name: Create Release
@@ -132,7 +141,9 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
-          files: artifacts/*.tar.gz
+          files: |
+            artifacts/*.tar.gz
+            artifacts/*.tar.gz.sha256
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

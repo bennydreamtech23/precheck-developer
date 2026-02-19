@@ -31,7 +31,7 @@ cargo test --manifest-path native/precheck_native/Cargo.toml
 
 - `lib/` - Elixir source code
 - `native/` - Rust NIF modules
-- `scripts/` - Shell scripts (packaged for distribution)
+- `scripts/` - Internal development/validation scripts (not shipped in hardened public artifacts)
 - `test/` - Test files
 
 ## Release Process
