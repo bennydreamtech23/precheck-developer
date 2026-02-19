@@ -29,7 +29,9 @@ defmodule Precheck.Native do
 
     case Enum.find(candidate_paths, &File.exists?/1) do
       nil ->
-        {:error, {:load_failed, "NIF library not found in known paths: #{Enum.join(candidate_paths, ", ")}"}}
+        {:error,
+         {:load_failed,
+          "NIF library not found in known paths: #{Enum.join(candidate_paths, ", ")}"}}
 
       nif_path ->
         :erlang.load_nif(strip_extension(nif_path, ext), 0)
