@@ -65,20 +65,6 @@ Optional local validation:
 ./scripts/validate_fixes.sh
 ```
 
-## Docker Sandbox For AI Agents
-
-For long-running or experimental agent tasks, run Codex in Docker Sandbox:
-
-```bash
-docker sandbox run codex
-```
-
-Minimum setup:
-
-- Docker Desktop `4.58+` with Docker AI Agent enabled
-- `OPENAI_API_KEY` exported in shell config (`~/.bashrc` or `~/.zshrc`)
-
-Use sandbox mode for heavy scans, longer test loops, and automation experiments to reduce host-machine risk.
 
 ## Release
 
