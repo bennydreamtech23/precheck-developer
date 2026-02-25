@@ -122,7 +122,10 @@ check_prerequisites() {
 
 # Check if running from local repo or remote install
 detect_install_source() {
-    if [ -f "universal_precheck.sh" ] && [ -f "elixir_precheck.sh" ] && [ -f "nodejs_precheck.sh" ]; then
+    local script_dir
+    script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+    if [ -f "$script_dir/universal_precheck.sh" ] && [ -f "$script_dir/elixir_precheck.sh" ] && [ -f "$script_dir/nodejs_precheck.sh" ]; then
         INSTALL_SOURCE="local"
         log_info "Installing from local repository"
     else
@@ -137,7 +140,7 @@ download_scripts() {
     
     mkdir -p "$INSTALL_DIR"
     
-    local base_url="https://raw.githubusercontent.com/bennydreamtech23/precheck-developer/master"
+    local base_url="https://raw.githubusercontent.com/bennydreamtech23/precheck-developer/master/scripts"
     local scripts=(
         "universal_precheck.sh"
         "elixir_precheck.sh"

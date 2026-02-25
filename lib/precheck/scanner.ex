@@ -1,7 +1,7 @@
 defmodule Precheck.Scanner do
   @moduledoc """
   High-level scanner interface.
-  Delegates to Native module for actual scanning.
+  Delegates to scanner backend for actual scanning.
   """
 
   def check_secrets(path) do
