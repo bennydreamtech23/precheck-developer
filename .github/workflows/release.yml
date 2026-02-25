@@ -18,29 +18,11 @@ jobs:
         include:
           - os: ubuntu-latest
             target: linux-x64
-            rust_target: x86_64-unknown-linux-gnu
           - os: macos-latest
             target: darwin-arm64
-            rust_target: aarch64-apple-darwin
 
     steps:
       - uses: actions/checkout@v4
-
-      - name: Create tag if manual deployment
-        if: github.event_name == 'workflow_dispatch'
-        run: |
-          TAG_NAME=${{ github.ref_name }}
-          if [ -z "$TAG_NAME" ] || [ "$TAG_NAME" == "refs/heads/main" ]; then
-            echo "No tag found from ref. Please create a tag manually or update workflow to accept a tag input."
-            exit 1
-          fi
-          git fetch --tags
-          if git rev-parse "$TAG_NAME" >/dev/null 2>&1; then
-            echo "Tag $TAG_NAME already exists."
-          else
-            git tag "$TAG_NAME"
-            git push origin "$TAG_NAME"
-          fi
 
       - name: Setup Elixir
         uses: erlef/setup-beam@v1
@@ -48,71 +30,35 @@ jobs:
           elixir-version: "1.16"
           otp-version: "26"
 
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: ${{ matrix.rust_target }}
-
       - name: Get Elixir dependencies
         run: |
           mix local.hex --force
           mix local.rebar --force
           mix deps.get
 
-      - name: Build Elixir escript (includes Rust NIF compilation)
-        env:
-          RUSTFLAGS: "-C target-cpu=native"
+      - name: Build Elixir escript
         run: |
-          # Compile the project (this automatically compiles the Rust NIF)
           mix compile
-
-          # Build the escript executable
           mix escript.build
 
-          echo "✅ Escript built successfully!"
+          echo "✅ Escript built successfully"
           ls -lah precheck
-          file precheck
 
       - name: Prepare release artifacts
         run: |
-          mkdir -p dist/bin dist/priv/native
+          mkdir -p dist/bin dist/scripts
 
-          # Copy the compiled CLI core.
-          # Keep "precheck" for backward compatibility and publish "precheck-core"
-          # as the explicit stable command name for installers.
           cp precheck dist/bin/precheck
-          cp precheck dist/bin/precheck-core
           chmod +x dist/bin/precheck
-          chmod +x dist/bin/precheck-core
 
-          # Copy the compiled NIF for runtime loading
-          NIF_FILE="$(find priv/native -maxdepth 1 -type f -name 'precheck_native.*' | head -1)"
-          if [ -z "$NIF_FILE" ]; then
-            echo "❌ Compiled NIF not found under priv/native"
-            ls -lah priv/native || true
-            exit 1
-          fi
-          cp "$NIF_FILE" "dist/priv/native/$(basename "$NIF_FILE")"
+          cp scripts/*.sh dist/scripts/
+          chmod +x dist/scripts/*.sh
+
+          cp README.md LICENSE dist/ 2>/dev/null || true
 
           echo "📦 Release artifacts ready:"
           ls -lah dist/bin/
-          ls -lah dist/priv/native/
-
-      - name: Copy additional files
-        run: |
-          cp README.md LICENSE dist/ 2>/dev/null || true
-
-      - name: Enforce compiled-only public artifact
-        run: |
-          if [ -d dist/scripts ]; then
-            echo "❌ dist/scripts must not be shipped in public artifacts."
-            exit 1
-          fi
-          if ls dist/*.sh >/dev/null 2>&1; then
-            echo "❌ Shell scripts must not be shipped in public artifacts."
-            exit 1
-          fi
-          echo "✅ Public artifact policy check passed (compiled-only)."
+          ls -lah dist/scripts/
 
       - name: Create tarball
         run: |
@@ -123,10 +69,6 @@ jobs:
           else
             shasum -a 256 ../precheck-${{ github.ref_name }}-${{ matrix.target }}.tar.gz > ../precheck-${{ github.ref_name }}-${{ matrix.target }}.tar.gz.sha256
           fi
-
-          echo "✅ Tarball created:"
-          ls -lah ../precheck-${{ github.ref_name }}-${{ matrix.target }}.tar.gz
-          ls -lah ../precheck-${{ github.ref_name }}-${{ matrix.target }}.tar.gz.sha256
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -159,12 +101,3 @@ jobs:
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Trigger public repo publish
-        if: success()
-        run: |
-          curl -X POST \
-            -H "Accept: application/vnd.github.v3+json" \
-            -H "Authorization: Bearer ${{ secrets.PRECHECK_PUBLIC_TOKEN}}" \
-            https://api.github.com/repos/bennydreamtech23/precheck/actions/workflows/publish-release.yml/dispatches \
-            -d '{"ref":"master","inputs":{"version":"${{ github.ref_name }}"}}'

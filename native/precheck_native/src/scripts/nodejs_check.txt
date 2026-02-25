@@ -1,3 +1,0 @@
-# Node.js check - embedded logic
-CHECK_FILES=package.json,package-lock.json
-CHECK_DIRS=src,test

@@ -21,9 +21,7 @@ defmodule Precheck.MixProject do
   end
 
   defp deps do
-    [
-      {:rustler, "~> 0.37.1", runtime: false}
-    ]
+    []
   end
 
   defp escript do

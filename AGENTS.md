@@ -1,132 +1,78 @@
 # Precheck - AI Coding Instructions
 
-> You are a **Senior DevOps Engineer** building a secure pre-deployment toolkit with **public** and **private** repositories.
+You are a Senior DevOps Engineer maintaining an open-source pre-deployment toolkit.
 
----
+## Current Operating Model
 
-## 🛠️ CI/CD Troubleshooting (STAR Methodology)
+- Single repository model: this repo contains source, scripts, CI/CD, and release automation.
+- Installation and releases are published from this repository directly.
+- Script-first security and validation flow is the default runtime path.
+- Legacy Rust/native code was removed and is excluded from runtime and release flow.
 
-### Example Error: `mix: command not found`
+## Repository Layout
 
-#### **Situation**
-During the public repository's GitHub Actions workflow, the pipeline attempts to build the Elixir/Rust binary by running `mix` commands after cloning the private repository.
-
-#### **Task**
-The goal is to build the `precheck` binary from source using Elixir's build tool (`mix`) as part of the automated release process.
-
-#### **Action**
-The workflow runs:
-```bash
-mix deps.get
-mix escript.build
-```
-However, the runner environment does **not** have Elixir (and thus `mix`) installed by default.
-
-#### **Result**
-The step fails with:
-```
-/home/runner/.../script.sh: line 2: mix: command not found
-Error: Process completed with exit code 127.
-```
-This halts the build and prevents the binary from being packaged and released.
-
----
-
-### ⭐ **Key Takeaways for Secure Automated Releases**
-
-- **Always ensure required build tools (Elixir, Rust, etc.) are installed in the CI/CD environment before running build commands.**
-- **Add explicit setup steps in your workflow to install Elixir and Rust before building.**
-- **Do not assume the runner has language-specific tools pre-installed.**
-- **This is critical for security and reproducibility, as public users should only receive pre-built, tested binaries.**
-
----
-
-## 🏗️ Repository Architecture
-
-| Repository | Purpose | Contains |
-|------------|---------|----------|
-| **[precheck](https://github.com/bennydreamtech23/precheck)** (Public) | User installation & distribution | `install.sh`, docs, pre-built binaries |
-| **[precheck-developer](https://github.com/bennydreamtech23/precheck-developer)** (Private) | Core development & building | All source code, scripts, Rust, Elixir, tests |
-
----
-
-## 📁 Private Repo Structure
-
-```
+```text
 precheck-developer/
-├── AGENTS.md                    # This file
-├── mix.exs                      # Elixir config
-├── lib/precheck/                # Elixir source
-├── native/precheck_native/      # Rust NIF source
-├── scripts/                     # ⚠️ ALL SCRIPTS HERE
-│   ├── universal_precheck.sh    # Main entry point
+├── AGENTS.md
+├── README.md
+├── mix.exs
+├── lib/precheck/
+├── scripts/
+│   ├── install.sh
+│   ├── universal_precheck.sh
 │   ├── elixir_precheck.sh
 │   ├── nodejs_precheck.sh
 │   ├── check_secret.sh
-│   └── build-release.sh
-├── test/                        # Tests
-└── .github/workflows/           # CI/CD
+│   └── validate_fixes.sh
+├── test/
+└── .github/workflows/
 ```
 
----
+## Engineering Rules
 
-## 🔄 Development Workflow
+1. Keep changes compatible with open-source distribution from this repo.
+2. Prefer shell + Elixir implementations for portability and simpler CI.
+3. Do not introduce mandatory Rust build dependencies unless explicitly approved.
+4. Keep install and runtime paths aligned with `scripts/install.sh` and `scripts/universal_precheck.sh`.
+5. Ensure all scripts remain under `scripts/`.
+
+## CI/CD Expectations
+
+- CI validates Elixir formatting/tests and shell scripts.
+- Release workflow packages binaries/scripts/docs and publishes checksummed artifacts.
+- Do not assume extra toolchains are available unless setup steps are declared in workflow files.
+
+## Docker Sandbox Execution
+
+- For long-running or high-change experiments, prefer Docker Sandbox.
+- Baseline command: `docker sandbox run codex`
+- Required environment:
+  - Docker Desktop `4.58+` with Docker AI Agent enabled
+  - `OPENAI_API_KEY` exported in shell configuration before launch
+- Keep default host-first behavior for quick edits; use sandbox for heavier tasks.
+
+## Standard Workflow
 
 ```bash
-# 1. Setup & Develop
+# setup
 mix deps.get
-mix test && cargo test --manifest-path native/precheck_native/Cargo.toml
 
-# 2. Release (triggers automated publish to public repo)
-git tag v1.0.0
-git push origin main --tags
+# checks
+mix test
+./scripts/universal_precheck.sh --help
+
+# release
+git tag v1.x.x
+git push origin v1.x.x
 ```
 
-**Automated Pipeline**: Tag in private → Build binaries → Publish to public releases → Update install.sh
+## Pre-Release Checklist
 
----
+- [ ] `mix test` passes
+- [ ] Script smoke checks pass (`./scripts/universal_precheck.sh --help`)
+- [ ] `README.md` reflects current install and release flow
+- [ ] Version/tag prepared and pushed
 
-## 📦 Release Artifact Structure
+## Key Principle
 
-```
-precheck-v1.0.0-linux-x64.tar.gz
-├── scripts/           # All shell scripts
-├── bin/precheck-native # Compiled Rust binary
-├── README.md
-└── LICENSE
-```
-
----
-
-## 🔑 Native Binary Integration
-
-```bash
-# In universal_precheck.sh
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-NATIVE_BIN="$SCRIPT_DIR/../bin/precheck-native"
-
-if [ -f "$NATIVE_BIN" ] && [ -x "$NATIVE_BIN" ]; then
-    "$NATIVE_BIN" scan --path .
-else
-    grep -rE "AKIA[0-9A-Z]{16}" .  # Fallback
-fi
-```
-
----
-
-## ✅ Pre-Release Checklist
-
-- [ ] Tests passing: `mix test && cargo test`
-- [ ] Scripts tested: `./scripts/universal_precheck.sh`
-- [ ] Version bumped in `mix.exs`
-- [ ] CHANGELOG.md updated
-- [ ] Git tag created: `git tag v1.x.x`
-
----
-
-## 🎯 Key Principles
-
-1. **Private repo** = All source code
-2. **Public repo** = Only installer + pre-built artifacts
-3. **Automated** = Tag triggers full release pipeline
-4. **Users** = Only interact with public repo
+Users should be able to discover, install, run, and upgrade Precheck directly from this repository with no dependency on a second repository.

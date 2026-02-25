@@ -1,9 +1,6 @@
 defmodule Precheck do
   @moduledoc """
   Precheck - Secure pre-deployment toolkit.
-
-  Scripts are embedded and encrypted in the native binary.
-  Users cannot access raw script source code.
   """
 
   @version "1.0.0"

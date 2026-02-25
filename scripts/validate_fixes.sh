@@ -1,6 +1,5 @@
 #!/bin/bash
-# Validation script to test all fixes
-# Keep It Stupidly Simple (KISS) principle
+# Validation script to test repository checks
 
 set -e
 
@@ -16,7 +15,7 @@ PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 
 echo -e "${BLUE}╔════════════════════════════════════════╗${NC}"
 echo -e "${BLUE}║    PRECHECK VALIDATION SCRIPT          ║${NC}"
-echo -e "${BLUE}║    Testing all fixes                   ║${NC}"
+echo -e "${BLUE}║    Testing repository checks           ║${NC}"
 echo -e "${BLUE}╚════════════════════════════════════════╝${NC}"
 echo ""
 
@@ -27,10 +26,10 @@ PASSED_CHECKS=0
 run_validation() {
     local description="$1"
     local command="$2"
-    
+
     ((TOTAL_CHECKS++))
     echo -e "${YELLOW}Validating: $description${NC}"
-    
+
     if eval "$command" >/dev/null 2>&1; then
         echo -e "${GREEN}✅ $description${NC}"
         ((PASSED_CHECKS++))
@@ -41,29 +40,10 @@ run_validation() {
     fi
 }
 
-echo "=== 1. RUST FORMATTING VALIDATION ==="
+echo "=== 1. SHELL SCRIPT VALIDATION ==="
 echo ""
 
 cd "$PROJECT_DIR"
-
-# Test Rust formatting
-run_validation \
-    "Rust code formatting (cargo fmt)" \
-    "cargo fmt --manifest-path native/precheck_native/Cargo.toml -- --check"
-
-# Test Rust compilation
-run_validation \
-    "Rust compilation" \
-    "cargo check --manifest-path native/precheck_native/Cargo.toml"
-
-# Test Rust clippy
-run_validation \
-    "Rust clippy lints" \
-    "cargo clippy --manifest-path native/precheck_native/Cargo.toml -- -D warnings"
-
-echo ""
-echo "=== 2. SHELL SCRIPT VALIDATION ==="
-echo ""
 
 # Test shell scripts with shellcheck
 for script in scripts/*.sh; do
@@ -75,7 +55,7 @@ for script in scripts/*.sh; do
 done
 
 echo ""
-echo "=== 3. ELIXIR PROJECT VALIDATION ==="
+echo "=== 2. ELIXIR PROJECT VALIDATION ==="
 echo ""
 
 # Test Elixir formatting
@@ -94,7 +74,7 @@ run_validation \
     "mix test"
 
 echo ""
-echo "=== 4. SCRIPT EXECUTION VALIDATION ==="
+echo "=== 3. SCRIPT EXECUTION VALIDATION ==="
 echo ""
 
 # Test script help outputs
@@ -112,16 +92,8 @@ echo ""
 
 if [ "$PASSED_CHECKS" -eq "$TOTAL_CHECKS" ]; then
     echo -e "${GREEN}🎉 ALL VALIDATIONS PASSED! ($PASSED_CHECKS/$TOTAL_CHECKS)${NC}"
-    echo ""
-    echo "All fixes have been successfully validated:"
-    echo "✅ Rust formatting issues fixed"
-    echo "✅ Shell script warnings resolved"  
-    echo "✅ CI action references corrected"
-    echo "✅ All scripts executable and functional"
     exit 0
 else
     echo -e "${RED}❌ SOME VALIDATIONS FAILED ($PASSED_CHECKS/$TOTAL_CHECKS)${NC}"
-    echo ""
-    echo "Please check the failed validations above and fix any remaining issues."
     exit 1
 fi
