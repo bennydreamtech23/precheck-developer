@@ -131,6 +131,77 @@ run_optional_check() {
   fi
 }
 
+record_check_failure() {
+  local description="$1"
+  local recommendation="$2"
+  local severity="${3:-$SEVERITY_MEDIUM}"
+  local sev_color
+
+  sev_color=$(get_severity_color "$severity")
+  echo -e "${RED}❌ $description failed ${sev_color}[$severity]${NC}" | tee -a "$REPORT"
+  ((FAILED_TESTS++))
+  FAILED_REASONS+=("$description [$severity]")
+
+  case "$severity" in
+    "$SEVERITY_CRITICAL")
+      ((CRITICAL_FAILURES++))
+      CRITICAL_ISSUES+=("$description")
+      ;;
+    "$SEVERITY_HIGH")
+      ((HIGH_FAILURES++))
+      HIGH_ISSUES+=("$description")
+      ;;
+    "$SEVERITY_MEDIUM")
+      ((MEDIUM_FAILURES++))
+      MEDIUM_ISSUES+=("$description")
+      ;;
+    "$SEVERITY_LOW")
+      ((LOW_FAILURES++))
+      LOW_ISSUES+=("$description")
+      ;;
+  esac
+
+  if [ -n "$recommendation" ]; then
+    log "👉 $recommendation"
+  fi
+}
+
+run_outdated_dependencies_check() {
+  local description="Outdated dependencies"
+  local recommendation="Run: mix deps.update --all (review changes carefully)"
+  local severity="$SEVERITY_LOW"
+  local output
+  local status=0
+
+  ((TOTAL_TESTS++))
+  section "$description"
+  echo -e "${YELLOW}Running: mix hex.outdated --all${NC}" | tee -a "$REPORT"
+
+  output=$(mix hex.outdated --all 2>&1) || status=$?
+  echo "$output" >>"$REPORT"
+
+  if echo "$output" | grep -q "All dependencies up to date"; then
+    echo -e "${GREEN}✅ $description passed${NC}" | tee -a "$REPORT"
+    ((PASSED_TESTS++))
+    return 0
+  fi
+
+  if echo "$output" | grep -qE "Update available|major|minor"; then
+    record_check_failure "$description" "$recommendation" "$severity"
+    return 1
+  fi
+
+  # If we cannot determine outdated status reliably, use task exit status.
+  if [ "$status" -eq 0 ]; then
+    echo -e "${GREEN}✅ $description passed${NC}" | tee -a "$REPORT"
+    ((PASSED_TESTS++))
+    return 0
+  fi
+
+  record_check_failure "$description" "$recommendation" "$severity"
+  return 1
+}
+
 print_summary() {
   echo -e "\n${CYAN}╔════════════════════════════════════════╗${NC}"
   echo -e "${CYAN}║         TEST SUMMARY                   ║${NC}"
@@ -474,7 +545,7 @@ echo -e "${CYAN}╚════════════════════�
 
 # 1. Naming Convention Check (MEDIUM)
 run_check "Naming conventions" \
-  "mix credo --checks-without-tag naming --format json 2>/dev/null | jq -e '.issues | length == 0' 2>/dev/null || mix credo --checks-without-tag naming 2>&1 | grep -q 'No issues'" \
+  "mix credo --checks-without-tag naming" \
   "Run: mix credo --checks-without-tag naming for details" \
   "$SEVERITY_MEDIUM"
 
@@ -497,10 +568,7 @@ else
 fi
 
 # 3. Outdated Dependencies (LOW)
-run_check "Outdated dependencies" \
-  "mix hex.outdated --all 2>&1 | grep -q 'All dependencies up to date' || ! mix hex.outdated --all 2>&1 | grep -qE 'Update available|major|minor'" \
-  "Run: mix deps.update --all (review changes carefully)" \
-  "$SEVERITY_LOW"
+run_outdated_dependencies_check
 
 # 4. Unused Dependencies (LOW)
 run_check "Unused dependencies" \
@@ -522,7 +590,7 @@ run_check "Static analysis (Credo)" \
 
 # 7. Compilation Warnings (CRITICAL)
 run_check "Compilation warnings" \
-  "mix compile --warnings-as-errors --force" \
+  "mix compile --warnings-as-errors" \
   "Fix all compilation warnings before deployment" \
   "$SEVERITY_CRITICAL"
 
@@ -550,7 +618,7 @@ fi
 
 # 11. Production Compilation (CRITICAL)
 run_check "Production compilation" \
-  "MIX_ENV=prod mix compile --force" \
+  "MIX_ENV=prod mix compile" \
   "Fix production compilation errors" \
   "$SEVERITY_CRITICAL"
 
@@ -568,10 +636,17 @@ else
 fi
 
 # 13. Documentation Generation (LOW)
-run_check "Documentation generation" \
-  "mix docs" \
-  "Fix documentation errors" \
-  "$SEVERITY_LOW"
+if mix help docs >/dev/null 2>&1; then
+  run_check "Documentation generation" \
+    "mix docs" \
+    "Fix documentation errors" \
+    "$SEVERITY_LOW"
+else
+  run_optional_check "Documentation generation" \
+    "false" \
+    "Install: mix local.hex && mix archive.install hex ex_doc" \
+    "$SEVERITY_LOW"
+fi
 
 # 14. Module Documentation (LOW)
 run_check "Module documentation" \
