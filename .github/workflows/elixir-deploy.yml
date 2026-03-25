@@ -1,0 +1,76 @@
+name: Elixir Deploy
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        description: GitHub environment name for the deployment
+        required: true
+        type: string
+      elixir_version:
+        description: Elixir version to install with erlef/setup-beam
+        required: true
+        type: string
+      otp_version:
+        description: OTP version to install with erlef/setup-beam
+        required: true
+        type: string
+      working_directory:
+        description: Directory that contains the Phoenix application
+        required: false
+        default: .
+        type: string
+      deploy_command:
+        description: Deployment command for the target platform
+        required: true
+        type: string
+    secrets:
+      deploy_token:
+        description: Optional placeholder secret for deployment providers
+        required: false
+
+jobs:
+  deploy:
+    name: deploy
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    defaults:
+      run:
+        shell: bash
+        working-directory: ${{ inputs.working_directory }}
+    env:
+      MIX_ENV: prod
+      DEPLOY_TOKEN: ${{ secrets.deploy_token }}
+    steps:
+      - name: Check out application repository
+        uses: actions/checkout@v4
+
+      - name: Set up BEAM
+        uses: erlef/setup-beam@v1
+        with:
+          elixir-version: ${{ inputs.elixir_version }}
+          otp-version: ${{ inputs.otp_version }}
+
+      - name: Cache deps and build artifacts
+        uses: actions/cache@v4
+        with:
+          path: |
+            deps
+            _build
+          key: ${{ runner.os }}-mix-prod-${{ inputs.elixir_version }}-${{ inputs.otp_version }}-${{ hashFiles('**/mix.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-mix-prod-${{ inputs.elixir_version }}-${{ inputs.otp_version }}-
+
+      - name: Install Hex and Rebar
+        run: |
+          mix local.hex --force
+          mix local.rebar --force
+
+      - name: Install dependencies
+        run: mix deps.get --only prod
+
+      - name: Compile application
+        run: mix compile
+
+      - name: Run deploy command
+        run: ${{ inputs.deploy_command }}
