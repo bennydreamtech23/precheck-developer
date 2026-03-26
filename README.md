@@ -207,6 +207,9 @@ Release workflow builds the escript, packages scripts + docs, and publishes GitH
 - The project uses script-first and Elixir-based scanning for portability.
 - Legacy Rust artifacts were removed and are not part of runtime, CI, or release packaging.
 
+  ## Star the Repo
+  If you find this project useful, please consider giving it a ⭐ and sharing it with others.
+
 ## Contributing
 
 External contributors must fork this repository before contributing.
