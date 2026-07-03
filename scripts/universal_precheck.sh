@@ -3,7 +3,7 @@
 set -euo pipefail
 
 # Version and metadata
-VERSION="1.0.0-beta"
+VERSION="1.0.0"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CONFIG_FILE="$HOME/.precheck_config"
 INSTALL_DIR="$HOME/.precheck"

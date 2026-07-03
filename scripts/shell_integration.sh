@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Shell Integration Script v1.0.0-beta
-VERSION="1.0.0-beta"
+# Shell Integration Script v1.0.0
+VERSION="1.0.0"
 INSTALL_DIR="$HOME/.precheck"
 
 # Colors

@@ -1,6 +1,11 @@
 # Precheck
 
+[![CI](https://github.com/bennydreamtech23/precheck-developer/actions/workflows/elixir-ci.yml/badge.svg)](https://github.com/bennydreamtech23/precheck-developer/actions/workflows/elixir-ci.yml)
+[![Precheck Score](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/bennydreamtech23/3fbedf0934739dfa414e61074027881d/raw/precheck-badge.json)](#reusable-github-actions-workflows)
+
 Precheck is an open-source pre-deployment validation toolkit for Elixir and Node.js projects.
+
+![Precheck terminal report](./docs/precheck-demo.svg)
 
 This repository is now the single source of truth for development, installation, and releases.
 
@@ -43,6 +48,35 @@ precheck --debug
 - Build and test readiness checks
 - Basic secrets and hardcoded credential detection
 - Environment and configuration hygiene checks
+
+## Reports
+
+Every run writes a plain-text report (`elixir_report.txt` / `secrets_scan_report.txt`) next to your project — same content as the colored terminal output, with ANSI color codes stripped so it's readable in an editor, PR comment, or CI log.
+
+Want a shareable PDF instead? Pass `--pdf` (requires `pandoc`, or `enscript` + `ghostscript`):
+
+```bash
+precheck --pdf
+```
+
+## Score Badge
+
+Every run also writes `precheck-badge.json` in [shields.io endpoint format](https://shields.io/badges/endpoint-badge):
+
+```json
+{ "schemaVersion": 1, "label": "precheck", "message": "92%", "color": "green" }
+```
+
+To turn that into a live badge on your own repo:
+
+1. In your CI job (after running `elixir_precheck.sh` / `nodejs_precheck.sh`), publish `precheck-badge.json` to a public Gist using [`schneegans/dynamic-badges-action`](https://github.com/schneegans/dynamic-badges-action).
+2. Add the badge to your README:
+
+```md
+![Precheck Score](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/<you>/<gist-id>/raw/precheck-badge.json)
+```
+
+See [`docs/badge-workflow-snippet.yml`](./docs/badge-workflow-snippet.yml) for a copy-pasteable CI step.
 
 ## Repository Structure
 
@@ -190,7 +224,6 @@ Reusable workflow constraints to keep in mind:
 - Environment secrets cannot be passed through `workflow_call`. If the deploy workflow uses `environment`, GitHub uses that environment's secrets for the deploy job.
 - GitHub does not support redirects for actions or reusable workflows, so if the repository or workflow path changes, callers must update their `uses:` reference.
 
-
 ## Release
 
 Tag-based release builds happen in this repository:
@@ -208,6 +241,7 @@ Release workflow builds the escript, packages scripts + docs, and publishes GitH
 - Legacy Rust artifacts were removed and are not part of runtime, CI, or release packaging.
 
   ## Star the Repo
+
   If you find this project useful, please consider giving it a ⭐ and sharing it with others.
 
 ## Contributing

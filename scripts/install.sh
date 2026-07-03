@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Precheck Installer v1.0.0-beta
-VERSION="1.0.0-beta"
+# Precheck Installer v1.0.0
+VERSION="1.0.0"
 
 # Colors
 RED='\033[0;31m'
