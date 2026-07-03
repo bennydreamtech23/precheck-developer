@@ -34,10 +34,6 @@ SEVERITY_HIGH="HIGH"
 SEVERITY_MEDIUM="MEDIUM"
 SEVERITY_LOW="LOW"
 
-strip_ansi() {
-  sed -E 's/\x1b\[[0-9;]*[a-zA-Z]//g'
-}
-
 log() {
   w "$1"
 }
