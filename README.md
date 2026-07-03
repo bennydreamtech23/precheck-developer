@@ -25,6 +25,27 @@ cd precheck-developer
 ./scripts/install.sh
 ```
 
+### Update to latest (if already installed)
+
+If `precheck` is already on your system, rerun the installer to pull the latest scripts:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/bennydreamtech23/precheck-developer/master/scripts/install.sh | bash
+hash -r
+precheck --help
+```
+
+If you want a clean reinstall, remove the old install first, then install again:
+
+```bash
+rm -rf "$HOME/.precheck" "$HOME/.precheck_config"
+sudo rm -f /usr/local/bin/precheck 2>/dev/null || true
+rm -f "$HOME/.local/bin/precheck"
+curl -fsSL https://raw.githubusercontent.com/bennydreamtech23/precheck-developer/master/scripts/install.sh | bash
+hash -r
+precheck --help
+```
+
 ## Usage
 
 Run inside your project directory:
