@@ -35,11 +35,10 @@ SEVERITY_MEDIUM="MEDIUM"
 SEVERITY_LOW="LOW"
 
 log() {
-  echo -e "$1" | tee -a "$REPORT"
+  w "$1"
 }
-
 section() {
-  echo -e "\n${BLUE}=== $1 ===${NC}" | tee -a "$REPORT"
+  w "\n${BLUE}=== $1 ===${NC}"
 }
 
 get_severity_color() {
@@ -60,16 +59,16 @@ run_check() {
   
   ((TOTAL_TESTS++))
   section "$description"
-  echo -e "${YELLOW}Running: $command${NC}" | tee -a "$REPORT"
+  w "${YELLOW}Running: $command${NC}"
 
   if eval "$command" >>"$REPORT" 2>&1; then
-    echo -e "${GREEN}✅ $description passed${NC}" | tee -a "$REPORT"
+    w "${GREEN}✅ $description passed${NC}"
     ((PASSED_TESTS++))
     return 0
   else
     local sev_color
     sev_color=$(get_severity_color "$severity")
-    echo -e "${RED}❌ $description failed ${sev_color}[$severity]${NC}" | tee -a "$REPORT"
+    w "${RED}❌ $description failed ${sev_color}[$severity]${NC}"
     ((FAILED_TESTS++))
     FAILED_REASONS+=("$description [$severity]")
     
@@ -109,13 +108,13 @@ run_optional_check() {
   section "$description"
   
   if eval "$command" >>"$REPORT" 2>&1; then
-    echo -e "${GREEN}✅ $description passed${NC}" | tee -a "$REPORT"
+    w "${GREEN}✅ $description passed${NC}"
     ((PASSED_TESTS++))
     return 0
   else
     local sev_color
     sev_color=$(get_severity_color "$severity")
-    echo -e "${RED}❌ $description failed ${sev_color}[$severity]${NC}" | tee -a "$REPORT"
+    w "${RED}❌ $description failed ${sev_color}[$severity]${NC}"
     ((FAILED_TESTS++))
     FAILED_REASONS+=("$description [$severity]")
     
@@ -138,73 +137,129 @@ print_summary() {
   
   local pass_rate=$((PASSED_TESTS * 100 / TOTAL_TESTS))
   
-  echo -e "${BLUE}Total Tests:${NC} $TOTAL_TESTS" | tee -a "$REPORT"
-  echo -e "${GREEN}Passed:${NC} $PASSED_TESTS" | tee -a "$REPORT"
-  echo -e "${RED}Failed:${NC} $FAILED_TESTS" | tee -a "$REPORT"
-  echo -e "${BLUE}Pass Rate:${NC} ${pass_rate}%" | tee -a "$REPORT"
+  w "${BLUE}Total Tests:${NC} $TOTAL_TESTS"
+  w "${GREEN}Passed:${NC} $PASSED_TESTS"
+  w "${RED}Failed:${NC} $FAILED_TESTS"
+  w "${BLUE}Pass Rate:${NC} ${pass_rate}%"
   
   echo ""
   if [ $CRITICAL_FAILURES -gt 0 ]; then
-    echo -e "${RED}🚨 CRITICAL Failures:${NC} $CRITICAL_FAILURES ${RED}(MUST FIX BEFORE PR)${NC}" | tee -a "$REPORT"
+    w "${RED}🚨 CRITICAL Failures:${NC} $CRITICAL_FAILURES ${RED}(MUST FIX BEFORE PR)${NC}"
   fi
   if [ $HIGH_FAILURES -gt 0 ]; then
-    echo -e "${PURPLE}⚠️  HIGH Priority:${NC} $HIGH_FAILURES ${PURPLE}(Should fix before PR)${NC}" | tee -a "$REPORT"
+    w "${PURPLE}⚠️  HIGH Priority:${NC} $HIGH_FAILURES ${PURPLE}(Should fix before PR)${NC}"
   fi
   if [ $MEDIUM_FAILURES -gt 0 ]; then
-    echo -e "${YELLOW}⚠️  MEDIUM Priority:${NC} $MEDIUM_FAILURES ${YELLOW}(Recommended to fix)${NC}" | tee -a "$REPORT"
+    w "${YELLOW}⚠️  MEDIUM Priority:${NC} $MEDIUM_FAILURES ${YELLOW}(Recommended to fix)${NC}"
   fi
   if [ $LOW_FAILURES -gt 0 ]; then
-    echo -e "${CYAN}ℹ️  LOW Priority:${NC} $LOW_FAILURES ${CYAN}(Optional improvements)${NC}" | tee -a "$REPORT"
+    w "${CYAN}ℹ️  LOW Priority:${NC} $LOW_FAILURES ${CYAN}(Optional improvements)${NC}"
   fi
   
   if [ $FAILED_TESTS -gt 0 ]; then
     echo ""
     if [ ${#CRITICAL_ISSUES[@]} -gt 0 ]; then
-      echo -e "${RED}🚨 CRITICAL Issues (Block PR):${NC}" | tee -a "$REPORT"
+      w "${RED}🚨 CRITICAL Issues (Block PR):${NC}"
       for issue in "${CRITICAL_ISSUES[@]}"; do
-        echo -e "  ${RED}•${NC} $issue" | tee -a "$REPORT"
+        w "  ${RED}•${NC} $issue"
       done
       echo ""
     fi
     
     if [ ${#HIGH_ISSUES[@]} -gt 0 ]; then
-      echo -e "${PURPLE}⚠️  HIGH Priority Issues:${NC}" | tee -a "$REPORT"
+      w "${PURPLE}⚠️  HIGH Priority Issues:${NC}"
       for issue in "${HIGH_ISSUES[@]}"; do
-        echo -e "  ${PURPLE}•${NC} $issue" | tee -a "$REPORT"
+        w "  ${PURPLE}•${NC} $issue"
       done
       echo ""
     fi
     
     if [ ${#MEDIUM_ISSUES[@]} -gt 0 ]; then
-      echo -e "${YELLOW}⚠️  MEDIUM Priority Issues:${NC}" | tee -a "$REPORT"
+      w "${YELLOW}⚠️  MEDIUM Priority Issues:${NC}"
       for issue in "${MEDIUM_ISSUES[@]}"; do
-        echo -e "  ${YELLOW}•${NC} $issue" | tee -a "$REPORT"
+        w "  ${YELLOW}•${NC} $issue"
       done
       echo ""
     fi
     
     if [ ${#LOW_ISSUES[@]} -gt 0 ]; then
-      echo -e "${CYAN}ℹ️  LOW Priority Issues:${NC}" | tee -a "$REPORT"
+      w "${CYAN}ℹ️  LOW Priority Issues:${NC}"
       for issue in "${LOW_ISSUES[@]}"; do
-        echo -e "  ${CYAN}•${NC} $issue" | tee -a "$REPORT"
+        w "  ${CYAN}•${NC} $issue"
       done
       echo ""
     fi
   fi
   
-  echo -e "${BLUE}Result: ${PASSED_TESTS}/${TOTAL_TESTS} tests passed${NC}" | tee -a "$REPORT"
+  w "${BLUE}Result: ${PASSED_TESTS}/${TOTAL_TESTS} tests passed${NC}"
   
   # PR Readiness Assessment
   echo ""
   if [ $CRITICAL_FAILURES -gt 0 ]; then
-    echo -e "${RED}❌ NOT READY FOR PR - Critical issues must be fixed${NC}" | tee -a "$REPORT"
+    w "${RED}❌ NOT READY FOR PR - Critical issues must be fixed${NC}"
   elif [ $HIGH_FAILURES -gt 0 ]; then
-    echo -e "${YELLOW}⚠️  PROCEED WITH CAUTION - High priority issues should be addressed${NC}" | tee -a "$REPORT"
+    w "${YELLOW}⚠️  PROCEED WITH CAUTION - High priority issues should be addressed${NC}"
   elif [ $FAILED_TESTS -eq 0 ]; then
-    echo -e "${GREEN}✅ READY FOR PR - All checks passed!${NC}" | tee -a "$REPORT"
+    w "${GREEN}✅ READY FOR PR - All checks passed!${NC}"
   else
-    echo -e "${GREEN}✅ READY FOR PR - Only minor issues remaining${NC}" | tee -a "$REPORT"
+    w "${GREEN}✅ READY FOR PR - Only minor issues remaining${NC}"
   fi
+}
+
+# Write a shields.io "endpoint" badge JSON so CI can publish a live
+# "precheck: NN%" badge for repos that run this script.
+# See: https://shields.io/badges/endpoint-badge
+write_badge_json() {
+  local badge_file="${PRECHECK_BADGE_FILE:-precheck-badge.json}"
+  local pass_rate=0
+  if [ "$TOTAL_TESTS" -gt 0 ]; then
+    pass_rate=$((PASSED_TESTS * 100 / TOTAL_TESTS))
+  fi
+
+  local color="red"
+  if [ "$CRITICAL_FAILURES" -gt 0 ]; then
+    color="red"
+  elif [ "$HIGH_FAILURES" -gt 0 ]; then
+    color="orange"
+  elif [ "$pass_rate" -ge 90 ]; then
+    color="brightgreen"
+  elif [ "$pass_rate" -ge 75 ]; then
+    color="green"
+  elif [ "$pass_rate" -ge 50 ]; then
+    color="yellow"
+  else
+    color="red"
+  fi
+
+  cat > "$badge_file" << EOF
+{"schemaVersion":1,"label":"precheck","message":"${pass_rate}%","color":"${color}"}
+EOF
+
+  echo -e "${BLUE}🏷️  Badge data written to $badge_file${NC}"
+}
+
+# Optional: render the plain-text report as a downloadable PDF.
+# Only runs when explicitly requested (--pdf flag), and only if a
+# converter is available. Never blocks or fails the main check run.
+generate_pdf_report() {
+  local pdf_file="${REPORT%.txt}.pdf"
+
+  if command -v pandoc >/dev/null 2>&1; then
+    if pandoc "$REPORT" -o "$pdf_file" >/dev/null 2>&1; then
+      echo -e "${BLUE}📄 PDF report saved to $pdf_file${NC}"
+      return 0
+    fi
+  fi
+
+  if command -v enscript >/dev/null 2>&1 && command -v ps2pdf >/dev/null 2>&1; then
+    if enscript -q -B --word-wrap -p - "$REPORT" 2>/dev/null | ps2pdf - "$pdf_file" 2>/dev/null; then
+      echo -e "${BLUE}📄 PDF report saved to $pdf_file${NC}"
+      return 0
+    fi
+  fi
+
+  echo -e "${YELLOW}⚠️  Skipped PDF report: install 'pandoc' (or 'enscript' + 'ghostscript') to enable --pdf${NC}"
+  return 1
 }
 
 # Check for required tools BEFORE any setup
@@ -474,22 +529,31 @@ auto_setup() {
 # MAIN SCRIPT
 # ============================================
 
-echo -e "${BLUE}🔍 Node.js Pre-deployment Check${NC}" | tee -a "$REPORT"
-echo "Project: $(basename "$(pwd)")" | tee -a "$REPORT"
-echo "Date: $(date)" | tee -a "$REPORT"
+w "${BLUE}🔍 Node.js Pre-deployment Check${NC}"
+w "Project: $(basename "$(pwd)")"
+w "Date: $(date)"
 
 # Check for required tools FIRST
 check_required_tools
 
 # Detect package manager
 PKG_MANAGER=$(detect_package_manager)
-echo "Package Manager: $PKG_MANAGER" | tee -a "$REPORT"
+w "Package Manager: $PKG_MANAGER"
 
 # Parse arguments
-# Parse arguments
 RUN_SETUP=false
-if [[ "${1:-}" == "--setup" ]] || [[ "${1:-}" == "-s" ]]; then
-  RUN_SETUP=true
+GENERATE_PDF=false
+for arg in "$@"; do
+  case "$arg" in
+    --setup|-s)
+      RUN_SETUP=true
+      ;;
+    --pdf)
+      GENERATE_PDF=true
+      ;;
+  esac
+done
+if [ "$RUN_SETUP" = true ]; then
   echo -e "${YELLOW}⚙️  Setup mode enabled - running full checks before automatic setup...${NC}"
   echo ""
 fi
@@ -637,7 +701,15 @@ run_check "Package license defined" \
 # Print summary
 print_summary
 
+# Write badge JSON for CI/README score badges
+write_badge_json
+
 echo -e "\n${BLUE}📋 Report saved to $REPORT${NC}"
+
+# Optional PDF export (only when --pdf is passed, never blocks the run)
+if [ "$GENERATE_PDF" = true ]; then
+  generate_pdf_report
+fi
 
 # Exit with appropriate code
 # Run automatic setup AFTER all checks if requested

@@ -13,10 +13,22 @@ SECRETS_FOUND=0
 REPORT="secrets_scan_report.txt"
 : > "$REPORT"
 
-echo -e "${BLUE}🔒 Scanning for Secrets and Sensitive Data${NC}" | tee -a "$REPORT"
-echo "Project: $(basename "$(pwd)")" | tee -a "$REPORT"
-echo "Date: $(date)" | tee -a "$REPORT"
-echo "" | tee -a "$REPORT"
+# Strip ANSI color/escape codes so the saved report file is plain, readable text
+# while the terminal output keeps full color.
+strip_ansi() {
+  sed -E 's/\x1b\[[0-9;]*[a-zA-Z]//g'
+}
+
+# Write a line: colored to the terminal, plain text to $REPORT.
+w() {
+  echo -e "$1"
+  echo -e "$1" | strip_ansi >> "$REPORT"
+}
+
+w "${BLUE}🔒 Scanning for Secrets and Sensitive Data${NC}"
+w "Project: $(basename "$(pwd)")"
+w "Date: $(date)"
+w ""
 
 # Patterns to search for
 declare -A PATTERNS=(
@@ -67,14 +79,14 @@ for pattern_name in "${!PATTERNS[@]}"; do
   # Use grep to find matches
   # shellcheck disable=SC2086
   if matches=$(grep -rniE $EXCLUDE_ARGS "$pattern" . 2>/dev/null); then
-    echo -e "${RED}⚠️  Found potential $pattern_name:${NC}" | tee -a "$REPORT"
+    w "${RED}⚠️  Found potential $pattern_name:${NC}"
     echo "$matches" | while IFS= read -r line; do
       ((SECRETS_FOUND++))
       # Mask the actual secret value
       file_and_line=$(echo "$line" | cut -d: -f1,2)
-      echo -e "   ${YELLOW}$file_and_line${NC}" | tee -a "$REPORT"
+      w "   ${YELLOW}$file_and_line${NC}"
     done
-    echo "" | tee -a "$REPORT"
+    w ""
   fi
 done
 
@@ -99,14 +111,14 @@ SENSITIVE_FILES=(
 for file_pattern in "${SENSITIVE_FILES[@]}"; do
   if found_files=$(find . -name "$file_pattern" -not -path "*/node_modules/*" -not -path "*/.git/*" -not -path "*/_build/*" -not -path "*/deps/*" 2>/dev/null); then
     if [ -n "$found_files" ]; then
-      echo -e "${YELLOW}⚠️  Found sensitive file: $file_pattern${NC}" | tee -a "$REPORT"
+      w "${YELLOW}⚠️  Found sensitive file: $file_pattern${NC}"
       echo "$found_files" | while IFS= read -r file; do
         if [ -n "$file" ]; then
           # Check if file is in .gitignore
           if git check-ignore -q "$file" 2>/dev/null; then
-            echo -e "   ${GREEN}✓ $file (properly ignored)${NC}" | tee -a "$REPORT"
+            w "   ${GREEN}✓ $file (properly ignored)${NC}"
           else
-            echo -e "   ${RED}✗ $file (NOT in .gitignore)${NC}" | tee -a "$REPORT"
+            w "   ${RED}✗ $file (NOT in .gitignore)${NC}"
             ((SECRETS_FOUND++))
           fi
         fi
@@ -118,8 +130,8 @@ done
 
 # Check .gitignore existence
 if [ ! -f ".gitignore" ]; then
-  echo -e "${RED}⚠️  No .gitignore file found${NC}" | tee -a "$REPORT"
-  echo -e "   Create a .gitignore file to exclude sensitive files\n" | tee -a "$REPORT"
+  w "${RED}⚠️  No .gitignore file found${NC}"
+  w "   Create a .gitignore file to exclude sensitive files\n"
   ((SECRETS_FOUND++))
 fi
 
@@ -128,12 +140,12 @@ echo -e "${BLUE}Checking for hardcoded IP addresses...${NC}"
 # shellcheck disable=SC2086
 if ip_matches=$(grep -rniE $EXCLUDE_ARGS '\b([0-9]{1,3}\.){3}[0-9]{1,3}\b' . 2>/dev/null | grep -v "127.0.0.1\|0.0.0.0\|localhost"); then
   if [ -n "$ip_matches" ]; then
-    echo -e "${YELLOW}⚠️  Found hardcoded IP addresses:${NC}" | tee -a "$REPORT"
+    w "${YELLOW}⚠️  Found hardcoded IP addresses:${NC}"
     echo "$ip_matches" | head -5 | while IFS= read -r line; do
       file_and_line=$(echo "$line" | cut -d: -f1,2)
-      echo -e "   ${YELLOW}$file_and_line${NC}" | tee -a "$REPORT"
+      w "   ${YELLOW}$file_and_line${NC}"
     done
-    echo -e "   ${CYAN}(Use environment variables instead)${NC}\n" | tee -a "$REPORT"
+    w "   ${CYAN}(Use environment variables instead)${NC}\n"
   fi
 fi
 
@@ -143,19 +155,19 @@ echo -e "${CYAN}║         SECURITY SCAN SUMMARY          ║${NC}"
 echo -e "${CYAN}╚════════════════════════════════════════╝${NC}"
 
 if [ $SECRETS_FOUND -eq 0 ]; then
-  echo -e "${GREEN}✅ No secrets or sensitive data detected${NC}" | tee -a "$REPORT"
-  echo -e "${GREEN}✅ Security scan passed!${NC}" | tee -a "$REPORT"
+  w "${GREEN}✅ No secrets or sensitive data detected${NC}"
+  w "${GREEN}✅ Security scan passed!${NC}"
   exit 0
 else
-  echo -e "${RED}⚠️  Found $SECRETS_FOUND potential security issues${NC}" | tee -a "$REPORT"
-  echo "" | tee -a "$REPORT"
-  echo -e "${YELLOW}Recommendations:${NC}" | tee -a "$REPORT"
-  echo "1. Remove hardcoded secrets from your code" | tee -a "$REPORT"
-  echo "2. Use environment variables for sensitive data" | tee -a "$REPORT"
-  echo "3. Add sensitive files to .gitignore" | tee -a "$REPORT"
-  echo "4. Rotate any exposed credentials immediately" | tee -a "$REPORT"
-  echo "5. Use secret management tools (e.g., Vault, AWS Secrets Manager)" | tee -a "$REPORT"
-  echo "" | tee -a "$REPORT"
+  w "${RED}⚠️  Found $SECRETS_FOUND potential security issues${NC}"
+  w ""
+  w "${YELLOW}Recommendations:${NC}"
+  w "1. Remove hardcoded secrets from your code"
+  w "2. Use environment variables for sensitive data"
+  w "3. Add sensitive files to .gitignore"
+  w "4. Rotate any exposed credentials immediately"
+  w "5. Use secret management tools (e.g., Vault, AWS Secrets Manager)"
+  w ""
   echo -e "${BLUE}📋 Detailed report saved to $REPORT${NC}"
   exit 1
 fi
