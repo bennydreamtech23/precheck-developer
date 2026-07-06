@@ -91,7 +91,7 @@ When Precheck runs in CI, it automatically publishes the latest score to the hos
 Replace `OWNER` and `REPO` with your GitHub repository owner and name:
 
 ```md
-![Precheck Score](https://img.shields.io/endpoint?url=https://precheck-badge.bennydev.workers.dev/badge/OWNER/REPO)
+![Precheck Score](https://img.shields.io/endpoint?url=https://precheck-badge.bennydev.workers.dev/badge/OWNER/REPO.json)
 ```
 
 That's it. No additional setup is required.
