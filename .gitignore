@@ -19,6 +19,7 @@ erl_crash.dump
 .idea/
 .vscode/
 *.swp
+.wrangler/
 
 # OS
 .DS_Store
