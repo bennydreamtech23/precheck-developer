@@ -1,0 +1,9 @@
+name = "precheck-badge"
+main = "src/index.js"
+compatibility_date = "2026-07-01"
+
+# After running `wrangler kv namespace create PRECHECK_SCORES`,
+# paste the "id" it prints below.
+[[kv_namespaces]]
+binding = "PRECHECK_SCORES"
+id = "b8502f214f69463baeb16a51ec0265f4"

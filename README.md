@@ -82,22 +82,33 @@ precheck --pdf
 
 ## Score Badge
 
-Every run also writes `precheck-badge.json` in [shields.io endpoint format](https://shields.io/badges/endpoint-badge):
+Precheck includes a hosted badge service, so consuming repositories do **not** need to create a GitHub Gist, Cloudflare account, Pages site, or manage their own badge infrastructure.
 
-```json
-{ "schemaVersion": 1, "label": "precheck", "message": "92%", "color": "green" }
-```
+When Precheck runs in CI, it automatically publishes the latest score to the hosted badge service. Developers only need to add a single badge line to their README.
 
-To turn that into a live badge on your own repo:
+### Add the badge to your README
 
-1. In your CI job (after running `elixir_precheck.sh` / `nodejs_precheck.sh`), publish `precheck-badge.json` to a public Gist using [`schneegans/dynamic-badges-action`](https://github.com/schneegans/dynamic-badges-action).
-2. Add the badge to your README:
+Replace `OWNER` and `REPO` with your GitHub repository owner and name:
 
 ```md
-![Precheck Score](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/<you>/<gist-id>/raw/precheck-badge.json)
+![Precheck Score](https://img.shields.io/endpoint?url=https://precheck-badge.bennydev.workers.dev/badge/OWNER/REPO)
 ```
 
-See [`docs/badge-workflow-snippet.yml`](./docs/badge-workflow-snippet.yml) for a copy-pasteable CI step.
+That's it. No additional setup is required.
+
+### Security and transparency
+
+The Elixir and Node.js scripts contain a shared `PRECHECK_BADGE_TOKEN` used when reporting badge scores to the hosted service.
+
+This is **intentional**.
+
+Because Precheck aims for a zero-configuration experience, requiring every developer to create and manage their own API token would add unnecessary setup complexity. Instead, a shared token is embedded in the public scripts so badge publishing works immediately after installation.
+
+This token is **not treated as a secret** and should not be considered a security boundary. Anyone inspecting the source code can see it.
+
+The token exists only to reduce accidental or casual requests to the badge service. It is **not** intended to prevent a determined actor from submitting badge data, and it must never be reused for authentication or any operation requiring real security.
+
+Since badge scores are informational rather than security-sensitive, this trade-off was made deliberately to provide a much simpler developer experience.
 
 ## Repository Structure
 
