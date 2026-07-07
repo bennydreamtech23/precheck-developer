@@ -80,21 +80,47 @@ Want a shareable PDF instead? Pass `--pdf` (requires `pandoc`, or `enscript` + `
 precheck --pdf
 ```
 
-## Score Badge
+## Precheck Score Badge
 
-Precheck includes a hosted badge service, so consuming repositories do **not** need to create a GitHub Gist, Cloudflare account, Pages site, or manage their own badge infrastructure.
+Precheck includes a hosted badge service, so consuming repositories **do not** need to create a GitHub Gist, Cloudflare account, GitHub Pages site, or manage any badge infrastructure.
 
-When Precheck runs in CI, it automatically publishes the latest score to the hosted badge service. Developers only need to add a single badge line to their README.
+To display the Precheck score badge in your repository, complete the following steps.
 
-### Add the badge to your README
+### 1. Configure your CI workflow
 
-Replace `OWNER` and `REPO` with your GitHub repository owner and name:
+Ensure your CI installs and runs Precheck. For Elixir projects, add the following steps to your GitHub Actions workflow:
+
+```yaml
+- name: Setup Elixir
+  uses: erlef/setup-beam@v1
+  with:
+    elixir-version: "1.18.4"
+    otp-version: "27.3"
+
+- name: Install precheck
+  run: curl -fsSL https://raw.githubusercontent.com/bennydreamtech23/precheck-developer/master/scripts/install.sh | bash
+
+- name: Run precheck
+  run: precheck
+```
+
+> **Note:** The badge is only updated when `precheck` runs in your CI pipeline.
+
+### 2. Add the badge to your README
+
+Replace `OWNER` and `REPO` with your GitHub repository owner and repository name:
 
 ```md
 ![Precheck Score](https://img.shields.io/endpoint?url=https://precheck-badge.bennydev.workers.dev/badge/OWNER/REPO.json)
 ```
 
-That's it. No additional setup is required.
+For example, if your repository is `octocat/demo`:
+
+```md
+![Precheck Score](https://img.shields.io/endpoint?url=https://precheck-badge.bennydev.workers.dev/badge/octocat/demo.json)
+```
+
+Once your CI runs successfully, Precheck automatically publishes the latest score to the hosted badge service, and the badge in your README will always display the most recent result. No additional configuration is required.
 
 ### Security and transparency
 
