@@ -1,7 +1,7 @@
 # Precheck
 
-[![CI](https://github.com/bennydreamtech23/precheck-developer/actions/workflows/elixir-ci.yml/badge.svg)](https://github.com/bennydreamtech23/precheck-developer/actions/workflows/elixir-ci.yml)
-[![Precheck Score](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/bennydreamtech23/3fbedf0934739dfa414e61074027881d/raw/precheck-badge.json)](#reusable-github-actions-workflows)
+[![CI](https://github.com/bennydreamtech23/precheck-developer/actions/workflows/ci.yml/badge.svg)](https://github.com/bennydreamtech23/precheck-developer/actions/workflows/ci.yml)
+[![Precheck Score](https://img.shields.io/endpoint?url=https://precheck-badge.bennydev.workers.dev/badge/bennydreamtech23/precheck-developer.json)](#score-badge)
 
 Precheck is an open-source pre-deployment validation toolkit for Elixir and Node.js projects.
 

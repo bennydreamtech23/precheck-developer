@@ -43,6 +43,24 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # elixir_precheck.sh needs elixir/mix on PATH (it checks for them
+      # first thing and exits if missing) - without this step the script,
+      # and therefore the badge report, never actually runs.
+      - name: Setup Elixir
+        uses: erlef/setup-beam@v1
+        with:
+          elixir-version: "1.15"
+          otp-version: "26"
+
+      - name: Cache deps
+        uses: actions/cache@v4
+        with:
+          path: deps
+          key: ${{ runner.os }}-mix-${{ hashFiles('**/mix.lock') }}
+
+      - name: Install dependencies
+        run: mix deps.get
+
       - name: Make scripts executable
         run: chmod +x scripts/*.sh
 
@@ -54,28 +72,11 @@ jobs:
       - name: Test help output
         run: ./scripts/universal_precheck.sh --help
 
-      # Run precheck against this repo itself so the score badge always
-      # reflects the current state of master. continue-on-error means a
-      # failed check doesn't block CI here - it's just reported on the badge.
-      - name: Run precheck (self-check for badge)
-        id: precheck
+      # elixir_precheck.sh reports its own score to the hosted Cloudflare
+      # Worker badge service internally (report_precheck_score, gated on
+      # GITHUB_ACTIONS/GITHUB_REPOSITORY) - no separate badge-publishing
+      # step needed here anymore. continue-on-error so a failing check
+      # still reports (and shows) a real, possibly red/yellow score.
+      - name: Run precheck (self-check, also reports the score badge)
         continue-on-error: true
         run: ./scripts/elixir_precheck.sh
-
-      - name: Read badge data
-        id: badge
-        if: always()
-        run: |
-          echo "message=$(jq -r .message precheck-badge.json)" >> "$GITHUB_OUTPUT"
-          echo "color=$(jq -r .color precheck-badge.json)" >> "$GITHUB_OUTPUT"
-
-      - name: Publish precheck score badge
-        if: always()
-        uses: schneegans/dynamic-badges-action@v1.7.0
-        with:
-          auth: ${{ secrets.GIST_SECRET }}
-          gistID: 3fbedf0934739dfa414e61074027881d
-          filename: precheck-badge.json
-          label: precheck
-          message: ${{ steps.badge.outputs.message }}
-          color: ${{ steps.badge.outputs.color }}

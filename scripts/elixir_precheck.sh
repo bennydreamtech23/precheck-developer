@@ -12,7 +12,6 @@ NC='\033[0m'
 
 REPORT="elixir_report.txt"
 : > "$REPORT"
-
 # Shared token used by the hosted badge service.
 # This is intentionally public to enable zero-configuration badge publishing.
 # See the project's README for the rationale and security considerations.
@@ -317,13 +316,20 @@ report_precheck_score() {
     pass_rate=$((PASSED_TESTS * 100 / TOTAL_TESTS))
   fi
 
-  curl -fsS -X POST "${PRECHECK_BADGE_URL}/badge/${GITHUB_REPOSITORY}" \
+  local http_status
+  http_status=$(curl -sS -o /tmp/precheck-badge-response.json -w "%{http_code}" \
+    -X POST "${PRECHECK_BADGE_URL}/badge/${GITHUB_REPOSITORY}" \
     -H "Content-Type: application/json" \
     -H "x-precheck-token: ${PRECHECK_BADGE_TOKEN}" \
-    -d "{\"score\": ${pass_rate}}" \
-    >/dev/null 2>&1 || true
+    -d "{\"score\": ${pass_rate}}" 2>/tmp/precheck-badge-curl-error.log) || true
 
-  echo -e "${BLUE}🏷️  Reported score (${pass_rate}%) for ${GITHUB_REPOSITORY} to the precheck badge service${NC}"
+  if [ "$http_status" = "200" ]; then
+    echo -e "${BLUE}🏷️  Reported score (${pass_rate}%) for ${GITHUB_REPOSITORY} to the precheck badge service${NC}"
+  else
+    echo -e "${YELLOW}⚠️  Failed to report badge score (HTTP ${http_status:-no response})${NC}"
+    echo -e "${YELLOW}   Response: $(cat /tmp/precheck-badge-response.json 2>/dev/null)${NC}"
+    echo -e "${YELLOW}   curl error (if any): $(cat /tmp/precheck-badge-curl-error.log 2>/dev/null)${NC}"
+  fi
 }
 
 # Optional: render the plain-text report as a downloadable PDF.
