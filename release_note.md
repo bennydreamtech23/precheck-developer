@@ -13,6 +13,20 @@ First stable release of Precheck — a pre-deployment validation toolkit for Eli
 
 ### Install
 
+````bash
+curl -fsSL https://raw.githubusercontent.com/bennydreamtech23/precheck-developer/master/scripts/install.sh | bash
+
+
+## v1.0.2 — 2026-07-08
+
+Added -- github to enable precheck run on github wihout breaking
+
+### Highlights
+
+- Added --github tag for when we run on CI
+
+### Install
+
 ```bash
 curl -fsSL https://raw.githubusercontent.com/bennydreamtech23/precheck-developer/master/scripts/install.sh | bash
-```
+````
