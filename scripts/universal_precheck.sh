@@ -177,6 +177,12 @@ ${YELLOW}Options:${NC}
   -v, --version   Show version information
   --debug         Enable debug mode with verbose logging
   --setup, -s     Run automatic project setup before checks
+  --pdf           Also export the report as a PDF (requires pandoc, or enscript+ghostscript)
+  --github        Always exit 0 (for CI): runs every check and reports the
+                  score as normal, but never fails the step itself - use
+                  this so precheck's findings don't block unrelated jobs
+                  like deploy. Review the score badge/report for the
+                  real result.
 
 ${YELLOW}Supported Projects:${NC}
   • Elixir projects (detected by mix.exs)
@@ -192,6 +198,9 @@ ${YELLOW}Examples:${NC}
   # Debug mode
   precheck --debug
 
+  # CI mode: never fails the step, exits 0 regardless of findings
+  precheck --github
+
 ${YELLOW}Configuration:${NC}
   Location: $CONFIG_FILE
   To enable debug mode permanently: export PRECHECK_DEBUG=true
@@ -206,6 +215,7 @@ EOF
 
 # Parse command line arguments
 parse_args() {
+    PASSTHROUGH_ARGS=()
     while [[ $# -gt 0 ]]; do
         case $1 in
             -h|--help)
@@ -223,9 +233,14 @@ parse_args() {
                 ;;
             --setup|-s)
                 export RUN_SETUP="true"
+                PASSTHROUGH_ARGS+=("--setup")
                 shift
                 ;;
             *)
+                # Forward anything else (e.g. --pdf, --github) straight
+                # through to the language-specific script, so new flags
+                # don't need to be hardcoded here one at a time.
+                PASSTHROUGH_ARGS+=("$1")
                 shift
                 ;;
         esac
@@ -243,12 +258,7 @@ main() {
         exit 1
     fi
     
-    # Pass setup flag to language-specific script
-    if [ "${RUN_SETUP:-false}" = "true" ]; then
-        run_precheck --setup
-    else
-        run_precheck
-    fi
+    run_precheck "${PASSTHROUGH_ARGS[@]}"
 }
 
 main "$@"
