@@ -80,47 +80,67 @@ Want a shareable PDF instead? Pass `--pdf` (requires `pandoc`, or `enscript` + `
 precheck --pdf
 ```
 
-## Precheck Score Badge
+## Score Badge
 
-Precheck includes a hosted badge service, so consuming repositories **do not** need to create a GitHub Gist, Cloudflare account, GitHub Pages site, or manage any badge infrastructure.
+Precheck includes a hosted badge service, so consuming repositories do **not** need to create a GitHub Gist, Cloudflare account, Pages site, or manage their own badge infrastructure.
 
-To display the Precheck score badge in your repository, complete the following steps.
+The badge only updates when `precheck` actually runs in GitHub Actions - that's the one requirement. It reports its score automatically (via `GITHUB_ACTIONS`/`GITHUB_REPOSITORY`, both set by GitHub itself), so there's nothing to configure beyond making sure a CI job actually runs it.
 
-### 1. Configure your CI workflow
+### Requirement: a CI job that runs `precheck`
 
-Ensure your CI installs and runs Precheck. For Elixir projects, add the following steps to your GitHub Actions workflow:
+Add a job like this (adjust `elixir-version`/`otp-version` to your project, or swap in `nodejs_precheck.sh`'s setup for a Node.js project):
 
 ```yaml
-- name: Setup Elixir
-  uses: erlef/setup-beam@v1
-  with:
-    elixir-version: "1.18.4"
-    otp-version: "27.3"
+jobs:
+  precheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
 
-- name: Install precheck
-  run: curl -fsSL https://raw.githubusercontent.com/bennydreamtech23/precheck-developer/master/scripts/install.sh | bash
+      - name: Setup Elixir
+        uses: erlef/setup-beam@v1
+        with:
+          elixir-version: "1.18.4"
+          otp-version: "27.3"
 
-- name: Run precheck
-  run: precheck
+      - name: Install precheck
+        run: curl -fsSL https://raw.githubusercontent.com/bennydreamtech23/precheck-developer/master/scripts/install.sh | bash
+
+      - name: Run precheck
+        run: precheck --github
 ```
 
-> **Note:** The badge is only updated when `precheck` runs in your CI pipeline.
+Two things this depends on that are easy to miss:
 
-### 2. Add the badge to your README
+- **Elixir/Node must be set up in that job** (`erlef/setup-beam` above) _before_ `precheck` runs - without it, `precheck` exits immediately at its own tool-check step and never reaches the part that reports the score.
+- **The installer URL must be the real one** shown above - a placeholder or typo'd URL fails with `Could not resolve host`, and `precheck: command not found` right after it.
 
-Replace `OWNER` and `REPO` with your GitHub repository owner and repository name:
+`precheck` exits non-zero when it finds CRITICAL issues (failing tests, compile warnings, etc.) - the same way `mix test` failing would. That's fine when `precheck` is the _only_ thing in a job, but if it runs in a job alongside other, unrelated jobs in the same workflow (e.g. a separate `ci` job doing your real format/compile/test checks), a CRITICAL finding here makes the _whole workflow's_ conclusion `failure` even when those other jobs passed - which can unexpectedly block anything gated on that workflow, such as a `workflow_run`-triggered deploy.
+
+The `--github` flag (shown in the snippet above) avoids this: `precheck` still runs every check and still reports the real score to the badge, it just always exits `0`, so this step alone can never block unrelated jobs. Treat it as advisory in CI - use the badge or the downloaded report (see below) to see the real result, and let your actual test/compile job be the thing that gates deploys.
+
+### Downloading the report from CI
+
+Add an upload step after `precheck --github` runs, so the plain-text report is attached to the workflow run instead of only existing on the ephemeral runner:
+
+```yaml
+- name: Upload precheck report
+  if: always()
+  uses: actions/upload-artifact@v4
+  with:
+    name: precheck-report
+    path: elixir_report.txt
+```
+
+It'll show up under the run's **Artifacts** section on the Actions summary page.
+
+### Add the badge to your README
+
+Replace `OWNER` and `REPO` with your GitHub repository owner and name:
 
 ```md
 ![Precheck Score](https://img.shields.io/endpoint?url=https://precheck-badge.bennydev.workers.dev/badge/OWNER/REPO.json)
 ```
-
-For example, if your repository is `octocat/demo`:
-
-```md
-![Precheck Score](https://img.shields.io/endpoint?url=https://precheck-badge.bennydev.workers.dev/badge/octocat/demo.json)
-```
-
-Once your CI runs successfully, Precheck automatically publishes the latest score to the hosted badge service, and the badge in your README will always display the most recent result. No additional configuration is required.
 
 ### Security and transparency
 
