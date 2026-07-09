@@ -84,27 +84,10 @@ precheck --pdf
 
 Precheck includes a hosted badge service — no Gist, Cloudflare account, or badge infra to manage on your end.
 
-The badge only updates when `precheck` actually runs in GitHub Actions. It reports its score automatically (via `GITHUB_ACTIONS`/`GITHUB_REPOSITORY`, both set by GitHub itself) — nothing to configure beyond wiring up the reusable workflow below.
+The badge only updates when `precheck` actually runs in GitHub Actions. It reports its score automatically (via `GITHUB_ACTIONS`/`GITHUB_REPOSITORY`, both set by GitHub itself) — nothing to configure beyond wiring up one of the reusable workflows below.
 
-### Quick start (auto-detects project type)
+### Elixir projects
 
-\```yaml
-jobs:
-precheck:
-uses: bennydreamtech23/precheck-developer/.github/workflows/precheck.yml@master
-with:
-elixir_version: "1.18.4" # only used if an Elixir project is detected
-otp_version: "27.3" # only used if an Elixir project is detected
-node_version: "20" # only used if a Node.js project is detected
-\```
-
-Detection checks for `mix.exs` (Elixir) then `package.json` (Node.js). If your repo has both (e.g. an Elixir umbrella app with a JS `assets/` folder), it resolves to Elixir. Override this with `project_type: nodejs` (or `elixir`) if that's wrong for your repo.
-
-### Calling a language-specific workflow directly
-
-If you'd rather skip detection entirely, call the underlying workflow directly:
-
-**Elixir**
 \```yaml
 jobs:
 precheck:
@@ -114,7 +97,8 @@ elixir_version: "1.18.4"
 otp_version: "27.3"
 \```
 
-**Node.js**
+### Node.js projects
+
 \```yaml
 jobs:
 precheck:
@@ -123,11 +107,27 @@ with:
 node_version: "20" # package_manager: "pnpm" # optional — auto-detected from lockfile if omitted
 \```
 
+### Multi-language / templated setups
+
+If you maintain one workflow file that's copy-pasted across repos of different languages, use the dispatcher and declare `project_type` explicitly — it does **not** auto-detect:
+
+\```yaml
+jobs:
+precheck:
+uses: bennydreamtech23/precheck-developer/.github/workflows/precheck.yml@master
+with:
+project_type: "elixir" # required: "elixir" or "nodejs"
+elixir_version: "1.18.4" # required if project_type is "elixir"
+otp_version: "27.3" # required if project_type is "elixir" # node_version: "20" # required if project_type is "nodejs"
+\```
+
+For a single repo, calling `precheck-elixir.yml` / `precheck-nodejs.yml` directly (above) is simpler — same `with:` values either way, without the extra indirection.
+
 ### Why a reusable workflow instead of a manual step
 
 Every path above handles language setup, dependency install, and running `precheck --github` internally, so your CI score can't diverge from a local run due to a missing setup step (a skipped `mix deps.get`, an `npm ci` that never ran, etc.).
 
-`precheck` always exits `0` in `--github` mode, even when it finds CRITICAL issues — it's advisory. Use the badge or the downloaded report artifact to see the real result, and let your actual test/build job be the thing that gates deploys.
+`precheck` always exits `0`, even when it finds CRITICAL issues — it's advisory. Use the badge or the downloaded report artifact to see the real result, and let your actual test/build job be the thing that gates deploys.
 
 ### Downloading the report from CI
 
