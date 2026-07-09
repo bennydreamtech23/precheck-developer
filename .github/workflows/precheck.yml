@@ -1,0 +1,67 @@
+name: Precheck
+
+on:
+  workflow_call:
+    inputs:
+      project_type:
+        description: "elixir, nodejs, or auto (detect from repo files)"
+        required: false
+        default: "auto"
+        type: string
+      elixir_version:
+        required: false
+        default: ""
+        type: string
+      otp_version:
+        required: false
+        default: ""
+        type: string
+      node_version:
+        required: false
+        default: ""
+        type: string
+      package_manager:
+        required: false
+        default: ""
+        type: string
+
+jobs:
+  detect:
+    runs-on: ubuntu-latest
+    outputs:
+      type: ${{ steps.resolve.outputs.type }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve project type
+        id: resolve
+        run: |
+          if [ "${{ inputs.project_type }}" != "auto" ]; then
+            echo "type=${{ inputs.project_type }}" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if [ -f "mix.exs" ]; then
+            echo "type=elixir" >> "$GITHUB_OUTPUT"
+          elif [ -f "package.json" ]; then
+            echo "type=nodejs" >> "$GITHUB_OUTPUT"
+          else
+            echo "::error::Could not detect project type (no mix.exs or package.json found). Set project_type explicitly."
+            exit 1
+          fi
+
+  precheck-elixir:
+    needs: detect
+    if: needs.detect.outputs.type == 'elixir'
+    uses: bennydreamtech23/precheck-developer/.github/workflows/precheck-elixir.yml@master
+    with:
+      elixir_version: ${{ inputs.elixir_version }}
+      otp_version: ${{ inputs.otp_version }}
+
+  precheck-nodejs:
+    needs: detect
+    if: needs.detect.outputs.type == 'nodejs'
+    uses: bennydreamtech23/precheck-developer/.github/workflows/precheck-nodejs.yml@master
+    with:
+      node_version: ${{ inputs.node_version }}
+      package_manager: ${{ inputs.package_manager }}

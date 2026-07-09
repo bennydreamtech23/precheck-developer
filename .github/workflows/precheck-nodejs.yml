@@ -1,0 +1,77 @@
+name: Precheck (Node.js)
+
+on:
+  workflow_call:
+    inputs:
+      node_version:
+        description: Node.js version to install with actions/setup-node
+        required: true
+        type: string
+      package_manager:
+        description: "Package manager to use: npm, yarn, pnpm, or bun. Leave unset to auto-detect from lockfile."
+        required: false
+        default: ""
+        type: string
+
+jobs:
+  precheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Detect package manager
+        id: pm
+        run: |
+          if [ -n "${{ inputs.package_manager }}" ]; then
+            echo "manager=${{ inputs.package_manager }}" >> "$GITHUB_OUTPUT"
+          elif [ -f "bun.lockb" ]; then
+            echo "manager=bun" >> "$GITHUB_OUTPUT"
+          elif [ -f "pnpm-lock.yaml" ]; then
+            echo "manager=pnpm" >> "$GITHUB_OUTPUT"
+          elif [ -f "yarn.lock" ]; then
+            echo "manager=yarn" >> "$GITHUB_OUTPUT"
+          else
+            echo "manager=npm" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ inputs.node_version }}
+          cache: ${{ steps.pm.outputs.manager == 'npm' && 'npm' || '' }}
+
+      - name: Enable corepack (yarn/pnpm)
+        if: steps.pm.outputs.manager == 'yarn' || steps.pm.outputs.manager == 'pnpm'
+        run: corepack enable
+
+      - name: Install bun
+        if: steps.pm.outputs.manager == 'bun'
+        uses: oven-sh/setup-bun@v2
+
+      - name: Cache dependencies
+        if: steps.pm.outputs.manager != 'npm'
+        uses: actions/cache@v4
+        with:
+          path: |
+            node_modules
+            ~/.cache/yarn
+            ~/.local/share/pnpm/store
+            ~/.bun/install/cache
+          key: ${{ runner.os }}-${{ steps.pm.outputs.manager }}-precheck-${{ hashFiles('**/yarn.lock', '**/pnpm-lock.yaml', '**/bun.lockb') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ steps.pm.outputs.manager }}-precheck-
+
+      - name: Install dependencies
+        run: |
+          case "${{ steps.pm.outputs.manager }}" in
+            yarn) yarn install --frozen-lockfile ;;
+            pnpm) pnpm install --frozen-lockfile ;;
+            bun) bun install --frozen-lockfile ;;
+            *) npm ci ;;
+          esac
+
+      - name: Install precheck
+        run: curl -fsSL https://raw.githubusercontent.com/bennydreamtech23/precheck-developer/master/scripts/install.sh | bash
+
+      - name: Run precheck
+        run: precheck --github

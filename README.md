@@ -82,42 +82,52 @@ precheck --pdf
 
 ## Score Badge
 
-Precheck includes a hosted badge service, so consuming repositories do **not** need to create a GitHub Gist, Cloudflare account, Pages site, or manage their own badge infrastructure.
+Precheck includes a hosted badge service — no Gist, Cloudflare account, or badge infra to manage on your end.
 
-The badge only updates when `precheck` actually runs in GitHub Actions - that's the one requirement. It reports its score automatically (via `GITHUB_ACTIONS`/`GITHUB_REPOSITORY`, both set by GitHub itself), so there's nothing to configure beyond making sure a CI job actually runs it.
+The badge only updates when `precheck` actually runs in GitHub Actions. It reports its score automatically (via `GITHUB_ACTIONS`/`GITHUB_REPOSITORY`, both set by GitHub itself) — nothing to configure beyond wiring up the reusable workflow below.
 
-### Requirement: a CI job that runs `precheck`
+### Quick start (auto-detects project type)
 
-Add a job like this (adjust `elixir-version`/`otp-version` to your project, or swap in `nodejs_precheck.sh`'s setup for a Node.js project):
-
-```yaml
+\```yaml
 jobs:
-  precheck:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
+precheck:
+uses: bennydreamtech23/precheck-developer/.github/workflows/precheck.yml@master
+with:
+elixir_version: "1.18.4" # only used if an Elixir project is detected
+otp_version: "27.3" # only used if an Elixir project is detected
+node_version: "20" # only used if a Node.js project is detected
+\```
 
-      - name: Setup Elixir
-        uses: erlef/setup-beam@v1
-        with:
-          elixir-version: "1.18.4"
-          otp-version: "27.3"
+Detection checks for `mix.exs` (Elixir) then `package.json` (Node.js). If your repo has both (e.g. an Elixir umbrella app with a JS `assets/` folder), it resolves to Elixir. Override this with `project_type: nodejs` (or `elixir`) if that's wrong for your repo.
 
-      - name: Install precheck
-        run: curl -fsSL https://raw.githubusercontent.com/bennydreamtech23/precheck-developer/master/scripts/install.sh | bash
+### Calling a language-specific workflow directly
 
-      - name: Run precheck
-        run: precheck --github
-```
+If you'd rather skip detection entirely, call the underlying workflow directly:
 
-Two things this depends on that are easy to miss:
+**Elixir**
+\```yaml
+jobs:
+precheck:
+uses: bennydreamtech23/precheck-developer/.github/workflows/precheck-elixir.yml@master
+with:
+elixir_version: "1.18.4"
+otp_version: "27.3"
+\```
 
-- **Elixir/Node must be set up in that job** (`erlef/setup-beam` above) _before_ `precheck` runs - without it, `precheck` exits immediately at its own tool-check step and never reaches the part that reports the score.
-- **The installer URL must be the real one** shown above - a placeholder or typo'd URL fails with `Could not resolve host`, and `precheck: command not found` right after it.
+**Node.js**
+\```yaml
+jobs:
+precheck:
+uses: bennydreamtech23/precheck-developer/.github/workflows/precheck-nodejs.yml@master
+with:
+node_version: "20" # package_manager: "pnpm" # optional — auto-detected from lockfile if omitted
+\```
 
-`precheck` exits non-zero when it finds CRITICAL issues (failing tests, compile warnings, etc.) - the same way `mix test` failing would. That's fine when `precheck` is the _only_ thing in a job, but if it runs in a job alongside other, unrelated jobs in the same workflow (e.g. a separate `ci` job doing your real format/compile/test checks), a CRITICAL finding here makes the _whole workflow's_ conclusion `failure` even when those other jobs passed - which can unexpectedly block anything gated on that workflow, such as a `workflow_run`-triggered deploy.
+### Why a reusable workflow instead of a manual step
 
-The `--github` flag (shown in the snippet above) avoids this: `precheck` still runs every check and still reports the real score to the badge, it just always exits `0`, so this step alone can never block unrelated jobs. Treat it as advisory in CI - use the badge or the downloaded report (see below) to see the real result, and let your actual test/compile job be the thing that gates deploys.
+Every path above handles language setup, dependency install, and running `precheck --github` internally, so your CI score can't diverge from a local run due to a missing setup step (a skipped `mix deps.get`, an `npm ci` that never ran, etc.).
+
+`precheck` always exits `0` in `--github` mode, even when it finds CRITICAL issues — it's advisory. Use the badge or the downloaded report artifact to see the real result, and let your actual test/build job be the thing that gates deploys.
 
 ### Downloading the report from CI
 

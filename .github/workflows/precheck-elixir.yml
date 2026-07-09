@@ -1,0 +1,47 @@
+name: Precheck (Elixir)
+
+on:
+  workflow_call:
+    inputs:
+      elixir_version:
+        required: true
+        type: string
+      otp_version:
+        required: true
+        type: string
+
+jobs:
+  precheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up BEAM
+        uses: erlef/setup-beam@v1
+        with:
+          elixir-version: ${{ inputs.elixir_version }}
+          otp-version: ${{ inputs.otp_version }}
+
+      - name: Cache deps and build artifacts
+        uses: actions/cache@v4
+        with:
+          path: |
+            deps
+            _build
+          key: ${{ runner.os }}-mix-precheck-${{ inputs.elixir_version }}-${{ inputs.otp_version }}-${{ hashFiles('**/mix.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-mix-precheck-${{ inputs.elixir_version }}-${{ inputs.otp_version }}-
+
+      - name: Install Hex and Rebar
+        run: |
+          mix local.hex --force
+          mix local.rebar --force
+
+      - name: Install dependencies
+        run: mix deps.get
+
+      - name: Install precheck
+        run: curl -fsSL https://raw.githubusercontent.com/bennydreamtech23/precheck-developer/master/scripts/install.sh | bash
+
+      - name: Run precheck
+        run: precheck --github
