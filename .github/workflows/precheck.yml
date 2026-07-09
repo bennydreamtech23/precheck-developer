@@ -8,15 +8,18 @@ on:
         required: true
         type: string
       elixir_version:
-        required: true
+        description: "Required if project_type is 'elixir'."
+        required: false
         default: ""
         type: string
       otp_version:
-        required: true
+        description: "Required if project_type is 'elixir'."
+        required: false
         default: ""
         type: string
       node_version:
-        required: true
+        description: "Required if project_type is 'nodejs'."
+        required: false
         default: ""
         type: string
       package_manager:
@@ -28,10 +31,21 @@ jobs:
   validate:
     runs-on: ubuntu-latest
     steps:
-      - name: Validate project_type
+      - name: Validate inputs
         run: |
           case "${{ inputs.project_type }}" in
-            elixir|nodejs) ;;
+            elixir)
+              if [ -z "${{ inputs.elixir_version }}" ] || [ -z "${{ inputs.otp_version }}" ]; then
+                echo "::error::project_type is 'elixir' — elixir_version and otp_version are required."
+                exit 1
+              fi
+              ;;
+            nodejs)
+              if [ -z "${{ inputs.node_version }}" ]; then
+                echo "::error::project_type is 'nodejs' — node_version is required."
+                exit 1
+              fi
+              ;;
             *)
               echo "::error::project_type must be 'elixir' or 'nodejs', got '${{ inputs.project_type }}'"
               exit 1
