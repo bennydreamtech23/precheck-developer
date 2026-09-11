@@ -693,11 +693,54 @@ run_check "Test suite" \
   "$SEVERITY_CRITICAL"
 
 # 9. Test Coverage (MEDIUM)
+# if grep -q "excoveralls" mix.exs 2>/dev/null; then
+#   run_check "Test coverage (>80%)" \
+#     "mix coveralls.json && jq -e '.coverage > 80' cover/excoveralls.json" \
+#     "Improve test coverage to at least 80%" \
+#     "$SEVERITY_MEDIUM"
+# fi
+
+
+# 9. Test Coverage (MEDIUM)
+if [ -n "${PRECHECK_COVERAGE_THRESHOLD:-}" ]; then
+  # Developer's own env var wins if set
+  COVERAGE_THRESHOLD="$PRECHECK_COVERAGE_THRESHOLD"
+elif [ -t 0 ] && [ "${GITHUB_ACTIONS:-false}" != "true" ]; then
+  # Interactive terminal, not CI - ask, same pattern as the phx.server prompt
+  echo -e "${CYAN}No PRECHECK_COVERAGE_THRESHOLD set.${NC}"
+  read -p "Minimum test coverage threshold to enforce (default 80): " -r
+  echo ""
+  if [[ "$REPLY" =~ ^[0-9]+$ ]]; then
+    COVERAGE_THRESHOLD="$REPLY"
+  else
+    COVERAGE_THRESHOLD=80
+  fi
+else
+  # Non-interactive (CI, piped, etc.) - just use the fallback, never block
+  COVERAGE_THRESHOLD=80
+fi
+
 if grep -q "excoveralls" mix.exs 2>/dev/null; then
-  run_check "Test coverage (>80%)" \
-    "mix coveralls.json && jq -e '.coverage > 80' cover/excoveralls.json" \
-    "Improve test coverage to at least 80%" \
+  run_check "Test coverage (>${COVERAGE_THRESHOLD}%)" \
+    "mix coveralls.json && jq -e '.coverage > ${COVERAGE_THRESHOLD}' cover/excoveralls.json" \
+    "Improve test coverage to at least ${COVERAGE_THRESHOLD}% (set PRECHECK_COVERAGE_THRESHOLD to change)" \
     "$SEVERITY_MEDIUM"
+else
+run_check "Test coverage (>${COVERAGE_THRESHOLD}%)" \
+  "mix test --cover | awk -v threshold=\"${COVERAGE_THRESHOLD}\" '
+    /\\| *Total *\$/ {
+      match(\$0, /[0-9]+\\.[0-9]+/)
+      pct = substr(\$0, RSTART, RLENGTH)
+      print \"Coverage: \" pct \"%\"
+      if (pct+0 >= threshold) found=1
+    }
+    END {
+      if (!found) print \"⚠️  Could not find Total coverage line - did mix test fail or format differ?\"
+      exit !found
+    }
+  '" \
+  "Improve test coverage to at least ${COVERAGE_THRESHOLD}% (set PRECHECK_COVERAGE_THRESHOLD to change; note: mix.exs test_coverage threshold, if set, is enforced separately by Mix itself)" \
+  "$SEVERITY_MEDIUM"
 fi
 
 # 10. Dialyzer (MEDIUM)
